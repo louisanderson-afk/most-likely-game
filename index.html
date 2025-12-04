@@ -30,26 +30,12 @@
       transition: background 0.25s ease, color 0.25s ease;
     }
 
-    /* Themes */
+    /* Themes (we always apply classic in JS) */
     body.theme-classic {
       --primary: #3498db;
       --secondary: #95a5a6;
       --danger: #e74c3c;
       --accent: #f1c40f;
-    }
-
-    body.theme-neon {
-      --primary: #a855f7;
-      --secondary: #22c55e;
-      --danger: #f97373;
-      --accent: #22d3ee;
-    }
-
-    body.theme-sunset {
-      --primary: #f97316;
-      --secondary: #f97373;
-      --danger: #ef4444;
-      --accent: #facc15;
     }
 
     /* Dark mode overrides */
@@ -74,6 +60,8 @@
       margin-top: 12px;
       box-shadow: 0 2px 6px rgba(0,0,0,0.04);
       transition: background 0.25s ease, border-color 0.25s ease, transform 0.2s ease;
+      position: relative;
+      overflow: hidden;
     }
 
     .card.fade-in {
@@ -138,6 +126,11 @@
       border: 1px solid var(--accent);
       white-space: pre-wrap;
       animation: popIn 0.25s ease-out;
+    }
+
+    /* Private question: blurred by default */
+    .blurred {
+      filter: blur(7px);
     }
 
     #status {
@@ -222,6 +215,51 @@
       font-size: 14px;
     }
 
+    /* Guess colours */
+    .guess-correct {
+      background: #16a34a !important; /* green */
+    }
+    .guess-wrong {
+      background: #dc2626 !important; /* red */
+    }
+
+    /* Reveal screen extras */
+    #revealCountdown {
+      font-size: 22px;
+      font-weight: 700;
+      text-align: center;
+      margin-top: 6px;
+    }
+
+    #revealQuestionText {
+      margin-top: 14px;
+      font-size: 26px;
+      line-height: 1.3;
+      font-weight: 800;
+      text-align: center;
+      padding: 16px;
+      border-radius: 14px;
+      background: color-mix(in srgb, var(--accent) 18%, transparent);
+      border: 2px solid var(--accent);
+      white-space: pre-wrap;
+    }
+
+    .confetto {
+      position: absolute;
+      top: -10px;
+      width: 6px;
+      height: 10px;
+      opacity: 0.9;
+      animation: confettiFall linear forwards;
+    }
+
+    @keyframes confettiFall {
+      to {
+        transform: translateY(260px) rotateZ(360deg);
+        opacity: 0;
+      }
+    }
+
     /* Animations */
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(4px); }
@@ -270,14 +308,11 @@
     <h2 style="font-size:18px;margin-top:0;">How to Play</h2>
     <ol class="subtext" style="color:inherit;">
       <li>Tap <strong>Start game</strong> and add player names.</li>
-      <li>Spin the wheel to choose a judge. Only they see the question.</li>
-      <li>The judge can press <strong>“Give me a question”</strong> up to 3 times:
-        <br>– 1st &amp; 2nd: re-rolls
-        <br>– 3rd: final question, they have to answer.
-      </li>
+      <li>Spin the wheel to choose a judge.</li>
+      <li>The judge presses <strong>“Give me a question”</strong> (up to 3 times). Only they can see it by holding the reveal button.</li>
       <li>Optionally:
-        <br>– Use <strong>Guess mode</strong> so others pick from 5 possible questions.
-        <br>– Use <strong>Reveal big screen</strong> to show the final question dramatically.
+        <br>– Use <strong>Guess mode</strong> so others pick from 5 possible questions (2 guesses).
+        <br>– Use <strong>Reveal big screen</strong> to show the final question with a countdown and confetti.
       </li>
       <li>Tap <strong>End Game</strong> to see the final history and custom questions.</li>
     </ol>
@@ -355,7 +390,10 @@
     <!-- Question area -->
     <div id="questionArea" style="margin-top:12px;">
       <button onclick="getQuestion()">❓ Give me a question</button>
-      <div id="questionDisplay"></div>
+      <div id="questionDisplay" class="blurred"></div>
+      <button id="peekButton" class="secondary-btn" style="margin-top:6px;">
+        👁️ Hold to reveal question (judge only)
+      </button>
     </div>
 
     <!-- New: guessing + reveal buttons -->
@@ -376,19 +414,9 @@
 
   <!-- REVEAL QUESTION (BIG SCREEN) -->
   <div id="revealCard" class="card" style="display:none;">
-    <h2 style="font-size:18px;margin-top:0;">Final Question</h2>
-    <p class="subtext">Show this on the TV / in the middle of the group.</p>
-    <div id="revealQuestionText" style="
-      margin-top:12px;
-      font-size:20px;
-      font-weight:700;
-      text-align:center;
-      padding:14px;
-      border-radius:12px;
-      background: color-mix(in srgb, var(--accent) 15%, transparent);
-      border:1px solid var(--accent);
-      white-space:pre-wrap;
-    "></div>
+    <h2 style="font-size:18px;margin-top:0;text-align:center;">Final Question</h2>
+    <div id="revealCountdown"></div>
+    <div id="revealQuestionText"></div>
     <button onclick="backToGameFromReveal()" class="secondary-btn" style="margin-top:12px;">
       ⬅️ Back to game
     </button>
@@ -488,14 +516,12 @@
 
     let currentPlayerIndex = null;
     let lastPlayerWithQuestion = null;
-    let history = []; // logs every roll with a turnId, display only final per turn
+    let history = [];
 
-    // per-turn limit: 3 questions max
-    let currentTurnQuestionCount = 0;
     const MAX_QUESTIONS_PER_TURN = 3;
-    let currentTurnId = 0; // increments each time the wheel selects a judge
+    let currentTurnQuestionCount = 0;
+    let currentTurnId = 0;
 
-    // Track current question for reveal/guess mode
     let currentQuestionText = null;
 
     // Guess mode state
@@ -507,6 +533,9 @@
     let wheelCanvas, wheelCtx;
     let wheelAngle = 0;
     let isSpinning = false;
+
+    // Reveal countdown
+    let revealCountdownTimer = null;
 
     // THEME & DARK MODE
     function applyTheme(theme) {
@@ -722,6 +751,7 @@
       isSpinning = true;
       document.getElementById('playerDisplay').textContent = "Spinning…";
       document.getElementById('questionDisplay').textContent = "";
+      document.getElementById('questionDisplay').classList.add('blurred');
       currentQuestionText = null;
       guessOptions = [];
       guessAttempts = 0;
@@ -750,12 +780,10 @@
           pd.textContent = chosenName;
           pd.classList.add('fade-in');
 
-          // new turn
           currentTurnId += 1;
           currentTurnQuestionCount = 0;
           updateStatus();
 
-          // vibration on stop (phones)
           if (navigator.vibrate) {
             navigator.vibrate(120);
           }
@@ -807,6 +835,7 @@
       const qd = document.getElementById('questionDisplay');
       qd.textContent = prefix + "\n\n" + question;
       qd.classList.add('fade-in');
+      qd.classList.add('blurred'); // keep private by default
 
       lastPlayerWithQuestion = currentPlayerIndex;
 
@@ -838,21 +867,108 @@
       document.getElementById('status').textContent = text;
     }
 
+    // PRIVATE QUESTION PEEK (hold button)
+    function showQuestion() {
+      const qd = document.getElementById('questionDisplay');
+      qd.classList.remove('blurred');
+    }
+
+    function hideQuestion() {
+      const qd = document.getElementById('questionDisplay');
+      if (qd.textContent.trim() !== "") {
+        qd.classList.add('blurred');
+      }
+    }
+
+    function attachPeekHandlers() {
+      const btn = document.getElementById('peekButton');
+      if (!btn) return;
+
+      const startEvents = ['mousedown', 'touchstart'];
+      const endEvents = ['mouseup', 'mouseleave', 'touchend', 'touchcancel'];
+
+      startEvents.forEach(ev => {
+        btn.addEventListener(ev, (e) => {
+          e.preventDefault();
+          showQuestion();
+        });
+      });
+
+      endEvents.forEach(ev => {
+        btn.addEventListener(ev, (e) => {
+          e.preventDefault();
+          hideQuestion();
+        });
+      });
+    }
+
     // REVEAL MODE
+    function clearRevealCountdown() {
+      if (revealCountdownTimer !== null) {
+        clearInterval(revealCountdownTimer);
+        revealCountdownTimer = null;
+      }
+    }
+
+    function startConfetti() {
+      const card = document.getElementById('revealCard');
+      const colors = ['#f97316','#22c55e','#3b82f6','#eab308','#ec4899','#22d3ee'];
+
+      for (let i = 0; i < 80; i++) {
+        const conf = document.createElement('div');
+        conf.className = 'confetto';
+        const left = Math.random() * 100;
+        const duration = 1 + Math.random() * 1.5;
+        const delay = Math.random() * 0.5;
+
+        conf.style.left = left + '%';
+        conf.style.background = colors[Math.floor(Math.random() * colors.length)];
+        conf.style.animationDuration = duration + 's';
+        conf.style.animationDelay = delay + 's';
+
+        card.appendChild(conf);
+
+        setTimeout(() => {
+          conf.remove();
+        }, (duration + delay) * 1000 + 200);
+      }
+    }
+
     function showRevealScreen() {
       if (!currentQuestionText) {
         alert("You need a question first. Press 'Give me a question'.");
         return;
       }
+
       hideAllScreens();
+      clearRevealCountdown();
+
       const textEl = document.getElementById('revealQuestionText');
+      const countdownEl = document.getElementById('revealCountdown');
+
       textEl.textContent = currentQuestionText;
+
+      let remaining = 5;
+      countdownEl.textContent = "Revealing in " + remaining + "…";
+
+      revealCountdownTimer = setInterval(() => {
+        remaining--;
+        if (remaining > 0) {
+          countdownEl.textContent = "Revealing in " + remaining + "…";
+        } else {
+          countdownEl.textContent = "🔥 GO!";
+          startConfetti();
+          clearRevealCountdown();
+        }
+      }, 1000);
+
       const c = document.getElementById('revealCard');
       c.style.display = 'block';
       c.classList.add('fade-in');
     }
 
     function backToGameFromReveal() {
+      clearRevealCountdown();
       hideAllScreens();
       const c = document.getElementById('gameCard');
       c.style.display = 'block';
@@ -879,7 +995,6 @@
       }
 
       guessOptions = [correct, ...distractors];
-      // shuffle
       for (let i = guessOptions.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [guessOptions[i], guessOptions[j]] = [guessOptions[j], guessOptions[i]];
@@ -893,7 +1008,7 @@
         const btn = document.createElement('button');
         btn.className = "secondary-btn";
         btn.textContent = q;
-        btn.onclick = () => handleGuessClick(index);
+        btn.onclick = () => handleGuessClick(index, btn);
         container.appendChild(btn);
       });
 
@@ -905,7 +1020,7 @@
       c.classList.add('fade-in');
     }
 
-    function handleGuessClick(index) {
+    function handleGuessClick(index, btnEl) {
       const resultEl = document.getElementById('guessResult');
       const buttons = document.querySelectorAll('#guessOptionsContainer button');
 
@@ -916,10 +1031,13 @@
 
       if (index === correctGuessIndex) {
         resultEl.textContent = "✅ Correct! You guessed the question.";
+        btnEl.classList.add('guess-correct');
         buttons.forEach(b => b.disabled = true);
         guessAttempts = 999;
       } else {
         guessAttempts++;
+        btnEl.classList.add('guess-wrong');
+
         if (guessAttempts < 2) {
           resultEl.textContent = "❌ Nope! Try one more time.";
         } else {
@@ -1004,7 +1122,9 @@
       document.getElementById('namesInput').value = "";
       document.getElementById('playersSaved').textContent = "";
       document.getElementById('playerDisplay').textContent = "";
-      document.getElementById('questionDisplay').textContent = "";
+      const qd = document.getElementById('questionDisplay');
+      qd.textContent = "";
+      qd.classList.add('blurred');
       document.getElementById('status').textContent =
         remainingQuestions.length + " questions available. Spin to start!";
 
@@ -1025,15 +1145,15 @@
       wheelCanvas = document.getElementById('wheelCanvas');
       wheelCtx = wheelCanvas.getContext('2d');
 
-      // Always default to classic theme
       applyTheme('classic');
-
       const savedDark = localStorage.getItem('ml_darkMode') === '1';
       applyDarkMode(savedDark);
 
       document.getElementById('status').textContent =
         remainingQuestions.length + " questions available. Spin to start!";
+
       drawWheel();
+      attachPeekHandlers();
     });
   </script>
 </body>
