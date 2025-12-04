@@ -10,7 +10,7 @@
     }
     body {
       font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-      max-width: 480px;           /* nice on phones */
+      max-width: 480px;           /* good on phones */
       margin: 0 auto;
       padding: 12px;
       background: #fafafa;
@@ -58,9 +58,15 @@
       text-align: center;
     }
     #questionDisplay {
-      margin-top: 10px;
-      font-size: 16px;
+      margin-top: 12px;
+      font-size: 18px;
+      font-weight: 600;
       text-align: center;
+      padding: 12px;
+      border-radius: 10px;
+      background: #fff7e6;
+      border: 1px solid #f1c40f;
+      white-space: pre-wrap; /* so \n works nicely */
     }
     #status {
       font-size: 12px;
@@ -99,9 +105,6 @@
       max-width: 100%;
       height: auto;
       touch-action: none;
-    }
-    .secondary-btn {
-      background: #95a5a6;
     }
     .danger-btn {
       background: #e74c3c;
@@ -151,12 +154,7 @@
 
     <p id="status"></p>
 
-    <!-- Reset questions -->
-    <button onclick="resetQuestions()" class="secondary-btn">
-      🔄 Reset questions
-    </button>
-
-    <!-- END GAME BUTTON (always at very bottom of game card) -->
+    <!-- END GAME BUTTON (at the very bottom) -->
     <button onclick="endGame()" class="danger-btn" style="margin-top:12px;">
       🚨 End Game
     </button>
@@ -165,7 +163,7 @@
   <!-- GAME OVER (hidden at first) -->
   <div id="gameOverCard" class="card" style="display:none;">
     <h2 style="color:#c0392b;font-size:20px;margin-top:0;">GAME OVER</h2>
-    <p class="subtext">Full history of this session:</p>
+    <p class="subtext">Final question each person ended on:</p>
     <div id="finalHistory"></div>
     <button onclick="newGame()" style="margin-top:12px;">
       🔁 New game
@@ -199,7 +197,12 @@
 
     let currentPlayerIndex = null;
     let lastPlayerWithQuestion = null;
-    let history = [];
+    let history = []; // we log every roll with a turnId, but only show final per turn
+
+    // per-turn limit: 3 questions max
+    let currentTurnQuestionCount = 0;
+    const MAX_QUESTIONS_PER_TURN = 3;
+    let currentTurnId = 0; // increments each time the wheel selects a judge
 
     // Wheel
     let wheelCanvas, wheelCtx;
@@ -236,8 +239,7 @@
       document.getElementById('gameCard').style.display = "block";
 
       document.getElementById('status').textContent =
-        remainingQuestions.length + " questions available.";
-
+        remainingQuestions.length + " questions available. Spin to start!";
       drawWheel();
     }
 
@@ -336,6 +338,11 @@
           const pd = document.getElementById('playerDisplay');
           pd.textContent = chosenName;
 
+          // new turn
+          currentTurnId += 1;
+          currentTurnQuestionCount = 0;
+          updateStatus();
+
           // auto-scroll to name on phones
           pd.scrollIntoView({ behavior: "smooth", block: "center" });
         }
@@ -344,16 +351,22 @@
       requestAnimationFrame(animate);
     }
 
-    // ---- QUESTIONS & HISTORY ----
+    // ---- QUESTIONS & TURN LIMIT ----
     function getQuestion() {
       if (currentPlayerIndex === null) {
         alert("Spin the wheel to choose a judge first!");
         return;
       }
 
+      if (currentTurnQuestionCount >= MAX_QUESTIONS_PER_TURN) {
+        alert("No more re-rolls this turn! You must answer the last question.");
+        return;
+      }
+
       if (remainingQuestions.length === 0) {
         document.getElementById('questionDisplay').textContent =
-          "No questions left. Reset to start again.";
+          "No questions left in the deck.";
+        updateStatus();
         return;
       }
 
@@ -361,37 +374,78 @@
       const question = remainingQuestions.splice(idx, 1)[0];
       const playerName = players[currentPlayerIndex];
 
-      document.getElementById('questionDisplay').textContent =
-        "Question for " + playerName + ":\n" + question;
+      currentTurnQuestionCount += 1;
 
-      document.getElementById('status').textContent =
-        remainingQuestions.length + " questions remaining.";
+      let prefix = "";
+      if (currentTurnQuestionCount === 1) {
+        prefix = "First question:";
+      } else if (currentTurnQuestionCount === 2) {
+        prefix = "Second question (1 re-roll used):";
+      } else if (currentTurnQuestionCount === 3) {
+        prefix = "FINAL question (no more re-rolls):";
+      }
+
+      document.getElementById('questionDisplay').textContent =
+        prefix + "\n\n" + question;
 
       lastPlayerWithQuestion = currentPlayerIndex;
 
+      // Log this roll with turnId; we will only show the last per turn
       history.push({
-        round: history.length + 1,
         player: playerName,
-        question: question
+        question: question,
+        turnId: currentTurnId,
+        roll: currentTurnQuestionCount
       });
+
+      updateStatus();
     }
 
-    function resetQuestions() {
-      remainingQuestions = [...ALL_QUESTIONS];
-      document.getElementById('questionDisplay').textContent = "";
-      document.getElementById('status').textContent =
-        remainingQuestions.length + " questions available.";
+    function updateStatus() {
+      const remaining = remainingQuestions.length;
+      const usedThisTurn = currentTurnQuestionCount;
+      const leftThisTurn = MAX_QUESTIONS_PER_TURN - usedThisTurn;
+
+      let text = remaining + " questions left in deck. ";
+      if (currentPlayerIndex !== null) {
+        text += " | This turn: " + usedThisTurn + "/" + MAX_QUESTIONS_PER_TURN;
+        if (leftThisTurn > 0) {
+          text += " (" + leftThisTurn + " re-rolls left)";
+        } else {
+          text += " (no re-rolls left)";
+        }
+      }
+
+      document.getElementById('status').textContent = text;
     }
 
     // ---- END GAME / NEW GAME ----
     function endGame() {
+      // confirmation to avoid accidental presses
+      const sure = confirm(
+        "Are you sure you want to end the game?\nYou’ll see the final history and can’t continue this round."
+      );
+      if (!sure) return;
+
       let html;
       if (history.length === 0) {
         html = "<p class='subtext'>No rounds were played.</p>";
       } else {
-        html = "<table><tr><th>#</th><th>Player</th><th>Question</th></tr>";
+        // Build a map of turnId -> last entry for that turn
+        const finalByTurn = {};
         history.forEach(h => {
-          html += "<tr><td>" + h.round + "</td><td>" +
+          finalByTurn[h.turnId] = h; // later rolls overwrite earlier ones
+        });
+
+        const turnIds = Object.keys(finalByTurn)
+          .map(Number)
+          .sort((a, b) => a - b);
+
+        html = "<table><tr><th>#</th><th>Player</th><th>Final question</th></tr>";
+        let displayRound = 1;
+        turnIds.forEach(tid => {
+          const h = finalByTurn[tid];
+          html += "<tr><td>" + displayRound++ + "</td><td>" +
                   h.player + "</td><td>" + h.question + "</td></tr>";
         });
         html += "</table>";
@@ -413,13 +467,15 @@
       history = [];
       wheelAngle = 0;
       isSpinning = false;
+      currentTurnQuestionCount = 0;
+      currentTurnId = 0;
 
       document.getElementById('namesInput').value = "";
       document.getElementById('playersSaved').textContent = "";
       document.getElementById('playerDisplay').textContent = "";
       document.getElementById('questionDisplay').textContent = "";
       document.getElementById('status').textContent =
-        remainingQuestions.length + " questions available.";
+        remainingQuestions.length + " questions available. Spin to start!";
 
       // show setup, hide others
       document.getElementById('setupCard').style.display = "block";
@@ -436,8 +492,7 @@
       wheelCtx = wheelCanvas.getContext('2d');
 
       document.getElementById('status').textContent =
-        remainingQuestions.length + " questions available.";
-
+        remainingQuestions.length + " questions available. Spin to start!";
       drawWheel();
     });
   </script>
