@@ -56,28 +56,49 @@
     th {
       background: #f5f5f5;
     }
+    /* Wheel layout */
+    #wheelWrapper {
+      text-align: center;
+      margin-top: 12px;
+    }
+    #pointer {
+      width: 0;
+      height: 0;
+      border-left: 12px solid transparent;
+      border-right: 12px solid transparent;
+      border-bottom: 20px solid #e74c3c;
+      margin: 0 auto 4px;
+    }
   </style>
 </head>
 <body>
   <h1>Most Likely Game</h1>
 
-  <!-- SETUP -->
+  <!-- SETUP SCREEN -->
   <div id="setupCard" class="card">
     <p>Enter player names, separated by commas:</p>
     <textarea id="namesInput" rows="3"
       placeholder="Alex, Sam, Jamie, Taylor"></textarea>
     <button onclick="savePlayers()">Save players</button>
-    <!-- NEW: Start game button -->
     <button onclick="startGame()" id="startButton" style="margin-left:8px;">
       ▶️ Start game
     </button>
     <p id="playersSaved" style="font-size:12px;color:#666;"></p>
   </div>
 
-  <!-- GAME CONTROLS -->
+  <!-- GAME SCREEN -->
   <div id="gameCard" class="card" style="display:none;">
-    <button onclick="pickRandomPlayer()">🎲 Pick random player</button>
+    <h2>Judge selection</h2>
+
+    <div id="wheelWrapper">
+      <div id="pointer"></div>
+      <canvas id="wheelCanvas" width="300" height="300"></canvas>
+    </div>
+
+    <button onclick="spinWheel()">🎡 Spin to choose judge</button>
     <div id="playerDisplay"></div>
+
+    <hr style="margin:16px 0;">
 
     <button onclick="getQuestion()">❓ Give me a question</button>
     <div id="questionDisplay"></div>
@@ -88,17 +109,16 @@
       Reset questions
     </button>
 
-    <!-- END GAME BUTTON -->
     <button onclick="endGame()" style="margin-top:12px;background:#e74c3c;color:white;">
       🚨 End Game
     </button>
   </div>
 
-  <!-- HISTORY (shown during game, hidden on game over) -->
+  <!-- HISTORY DURING GAME -->
   <div id="historyCard" class="card" style="display:none;">
     <h2>History</h2>
     <p style="font-size:12px;color:#666;">
-      Shows which player got which question this session.
+      Which player got which question this session.
     </p>
     <div id="historyContainer"></div>
     <button onclick="clearHistory()" style="margin-top:8px;">
@@ -134,16 +154,21 @@
       "Biggest arsehole (figuratively)",
       "Biggest simp",
       "Most likely to OD"
-      // ... add your full list ...
+      // ... paste the rest of your questions here ...
     ];
 
-    // 2) GAME STATE
+    // GAME STATE
     let players = [];
     let remainingQuestions = [...ALL_QUESTIONS];
 
-    let currentPlayerIndex = null;
-    let lastPlayerWithQuestion = null;
-    let history = [];
+    let currentPlayerIndex = null;       // currently selected judge
+    let lastPlayerWithQuestion = null;   // to avoid repeats
+    let history = [];                    // { round, player, question }
+
+    // Wheel state
+    let wheelCanvas, wheelCtx;
+    let wheelAngle = 0;                  // current rotation
+    let isSpinning = false;
 
     function savePlayers() {
       const text = document.getElementById('namesInput').value;
@@ -157,53 +182,141 @@
       }
 
       document.getElementById('playersSaved').textContent =
-        "Players saved: " + players.join(", ");
+        "Players: " + players.join(", ");
+
+      // Update wheel
+      drawWheel();
     }
 
-    // NEW: explicit start game
     function startGame() {
-      // If players haven't been saved yet, try saving them now
+      // If players not set yet, try to save them from textarea
       if (players.length === 0) {
         savePlayers();
-        if (players.length === 0) {
-          // still no players, abort
-          return;
-        }
+        if (players.length === 0) return;
       }
 
-      // Show game + history, keep setup visible if you like or hide it
+      // Hide setup screen, show game + history
+      document.getElementById('setupCard').style.display = "none";
       document.getElementById('gameCard').style.display = "block";
       document.getElementById('historyCard').style.display = "block";
 
-      // Initial status
       document.getElementById('status').textContent =
         remainingQuestions.length + " questions available.";
+
+      drawWheel();
     }
 
-    function pickRandomPlayer() {
-      if (players.length === 0) {
-        alert("Save your players first and start the game!");
+    // -------- WHEEL DRAWING & SPINNING --------
+
+    function drawWheel() {
+      if (!wheelCtx || players.length === 0) {
+        if (wheelCtx) {
+          // clear canvas if no players
+          wheelCtx.clearRect(0, 0, wheelCanvas.width, wheelCanvas.height);
+        }
         return;
       }
 
-      if (players.length === 1) {
-        currentPlayerIndex = 0;
-      } else {
-        let idx;
-        // avoid same player as last time
-        do {
-          idx = Math.floor(Math.random() * players.length);
-        } while (idx === lastPlayerWithQuestion);
-        currentPlayerIndex = idx;
+      const ctx = wheelCtx;
+      const canvas = wheelCanvas;
+      const radius = canvas.width / 2 - 10;
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height / 2;
+      const segmentAngle = 2 * Math.PI / players.length;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.save();
+
+      // Move to center and rotate whole wheel
+      ctx.translate(centerX, centerY);
+      ctx.rotate(wheelAngle);
+
+      for (let i = 0; i < players.length; i++) {
+        const startAngle = i * segmentAngle;
+        const endAngle = startAngle + segmentAngle;
+
+        // Slice color (simple alternating style)
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.arc(0, 0, radius, startAngle, endAngle);
+        ctx.closePath();
+        ctx.fillStyle = i % 2 === 0 ? "#f6d365" : "#fda085";
+        ctx.fill();
+        ctx.strokeStyle = "#ffffff";
+        ctx.stroke();
+
+        // Text
+        ctx.save();
+        ctx.fillStyle = "#333333";
+        ctx.rotate(startAngle + segmentAngle / 2);
+        ctx.textAlign = "right";
+        ctx.font = "14px system-ui";
+        ctx.fillText(players[i], radius - 10, 4);
+        ctx.restore();
       }
 
-      document.getElementById('playerDisplay').textContent =
-        "Chosen player: " + players[currentPlayerIndex];
+      ctx.restore();
+      // center dot
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, 8, 0, 2 * Math.PI);
+      ctx.fillStyle = "#ffffff";
+      ctx.fill();
+      ctx.strokeStyle = "#999999";
+      ctx.stroke();
     }
+
+    function spinWheel() {
+      if (players.length === 0) {
+        alert("Set up your players and start the game first.");
+        return;
+      }
+      if (isSpinning) return;
+
+      // Choose target judge (not same as last player with question, if possible)
+      let availableIndices = players.map((_, i) => i);
+      if (players.length > 1 && lastPlayerWithQuestion !== null) {
+        availableIndices = availableIndices.filter(i => i !== lastPlayerWithQuestion);
+      }
+      const targetIndex =
+        availableIndices[Math.floor(Math.random() * availableIndices.length)];
+
+      isSpinning = true;
+      document.getElementById('playerDisplay').textContent = "Spinning…";
+
+      const extraRotations = 4 + Math.random() * 2; // spin 4–6 full turns
+      const extraAngle = extraRotations * 2 * Math.PI;
+      const startAngle = wheelAngle;
+      const finalAngle = startAngle + extraAngle;
+      const duration = 2500 + Math.random() * 1000; // 2.5–3.5s
+      const startTime = performance.now();
+
+      function animate(now) {
+        const elapsed = now - startTime;
+        const t = Math.min(1, elapsed / duration);
+        const eased = 1 - Math.pow(1 - t, 3); // ease-out
+
+        wheelAngle = startAngle + eased * extraAngle;
+        drawWheel();
+
+        if (t < 1) {
+          requestAnimationFrame(animate);
+        } else {
+          isSpinning = false;
+          currentPlayerIndex = targetIndex;
+          const chosenName = players[currentPlayerIndex];
+          document.getElementById('playerDisplay').textContent =
+            "Judge: " + chosenName;
+        }
+      }
+
+      requestAnimationFrame(animate);
+    }
+
+    // -------- QUESTIONS & HISTORY --------
 
     function getQuestion() {
       if (currentPlayerIndex === null) {
-        alert("Pick a player first!");
+        alert("Spin the wheel to choose a judge first!");
         return;
       }
 
@@ -215,7 +328,6 @@
 
       const idx = Math.floor(Math.random() * remainingQuestions.length);
       const question = remainingQuestions.splice(idx, 1)[0];
-
       const playerName = players[currentPlayerIndex];
 
       document.getElementById('questionDisplay').textContent =
@@ -224,14 +336,15 @@
       document.getElementById('status').textContent =
         remainingQuestions.length + " questions remaining.";
 
+      // Track last player with a question (no repeats in a row)
       lastPlayerWithQuestion = currentPlayerIndex;
 
+      // Save to history
       history.push({
         round: history.length + 1,
         player: playerName,
         question: question
       });
-
       renderHistory();
     }
 
@@ -264,16 +377,17 @@
       c.innerHTML = html;
     }
 
+    // -------- GAME END / RESET --------
+
     function endGame() {
-      // Hide setup + active game + live history
+      // Hide game + history
       document.getElementById('gameCard').style.display = "none";
-      document.getElementById('setupCard').style.display = "none";
       document.getElementById('historyCard').style.display = "none";
+      document.getElementById('setupCard').style.display = "none";
 
       // Show final game over screen
       document.getElementById('gameOverCard').style.display = "block";
 
-      // Display final history
       let html;
       if (history.length === 0) {
         html = "<p style='font-size:12px;color:#666;'>No rounds were played.</p>";
@@ -284,17 +398,18 @@
         });
         html += "</table>";
       }
-
       document.getElementById('finalHistory').innerHTML = html;
     }
 
-    // NEW: start over completely
     function newGame() {
+      // Reset all state
       players = [];
       remainingQuestions = [...ALL_QUESTIONS];
       currentPlayerIndex = null;
       lastPlayerWithQuestion = null;
       history = [];
+      wheelAngle = 0;
+      isSpinning = false;
 
       // Reset UI
       document.getElementById('namesInput').value = "";
@@ -302,25 +417,4 @@
       document.getElementById('playerDisplay').textContent = "";
       document.getElementById('questionDisplay').textContent = "";
       document.getElementById('status').textContent =
-        remainingQuestions.length + " questions available.";
-
-      document.getElementById('historyContainer').innerHTML =
-        "<p style='font-size:12px;color:#666;'>No history yet.</p>";
-
-      // Show setup, hide game + game over
-      document.getElementById('setupCard').style.display = "block";
-      document.getElementById('gameCard').style.display = "none";
-      document.getElementById('historyCard').style.display = "none";
-      document.getElementById('gameOverCard').style.display = "none";
-    }
-
-    document.addEventListener('DOMContentLoaded', () => {
-      // Initial history text
-      renderHistory();
-      // Initial status (before game started)
-      document.getElementById('status').textContent =
-        remainingQuestions.length + " questions available.";
-    });
-  </script>
-</body>
-</html>
+        remai
