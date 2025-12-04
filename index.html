@@ -8,36 +8,91 @@
     * {
       box-sizing: border-box;
     }
+
+    :root {
+      --bg: #fafafa;
+      --text: #111827;
+      --card-bg: #ffffff;
+      --card-border: #e0e0e0;
+      --primary: #3498db;
+      --secondary: #95a5a6;
+      --danger: #e74c3c;
+      --accent: #f1c40f;
+    }
+
     body {
       font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-      max-width: 480px;           /* good on phones */
+      max-width: 480px;
       margin: 0 auto;
       padding: 12px;
-      background: #fafafa;
+      background: var(--bg);
+      color: var(--text);
+      transition: background 0.25s ease, color 0.25s ease;
     }
+
+    /* Themes */
+    body.theme-classic {
+      --primary: #3498db;
+      --secondary: #95a5a6;
+      --danger: #e74c3c;
+      --accent: #f1c40f;
+    }
+
+    body.theme-neon {
+      --primary: #a855f7;
+      --secondary: #22c55e;
+      --danger: #f97373;
+      --accent: #22d3ee;
+    }
+
+    body.theme-sunset {
+      --primary: #f97316;
+      --secondary: #f97373;
+      --danger: #ef4444;
+      --accent: #facc15;
+    }
+
+    /* Dark mode overrides */
+    body.dark {
+      --bg: #020617;
+      --text: #e5e7eb;
+      --card-bg: #0f172a;
+      --card-border: #1f2937;
+    }
+
     h1 {
       text-align: center;
       font-size: 22px;
       margin: 8px 0 4px;
     }
+
     .card {
-      background: #ffffff;
-      border: 1px solid #e0e0e0;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
       border-radius: 12px;
       padding: 14px;
       margin-top: 12px;
       box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+      transition: background 0.25s ease, border-color 0.25s ease, transform 0.2s ease;
     }
+
+    .card.fade-in {
+      animation: fadeIn 0.3s ease-out;
+    }
+
     textarea, input[type="text"] {
       width: 100%;
       padding: 8px;
       border-radius: 8px;
-      border: 1px solid #ccc;
+      border: 1px solid #4b5563;
       resize: vertical;
       font-size: 14px;
+      background: transparent;
+      color: inherit;
     }
+
     button {
-      width: 100%;                /* full-width buttons for phones */
+      width: 100%;
       padding: 10px 14px;
       border-radius: 10px;
       border: none;
@@ -45,24 +100,33 @@
       margin-top: 8px;
       font-size: 15px;
       font-weight: 600;
-      background: #3498db;
+      background: var(--primary);
       color: white;
+      transition: transform 0.1s ease, box-shadow 0.1s ease, background 0.25s ease;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.15);
     }
+
     button:active {
-      transform: scale(0.98);
+      transform: scale(0.97);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.2);
     }
+
     .secondary-btn {
-      background: #95a5a6;
+      background: var(--secondary);
     }
+
     .danger-btn {
-      background: #e74c3c;
+      background: var(--danger);
     }
+
     #playerDisplay {
       margin-top: 14px;
       font-size: 28px;
       font-weight: 800;
       text-align: center;
+      animation: fadeInUp 0.25s ease-out;
     }
+
     #questionDisplay {
       margin-top: 12px;
       font-size: 18px;
@@ -70,87 +134,197 @@
       text-align: center;
       padding: 12px;
       border-radius: 10px;
-      background: #fff7e6;
-      border: 1px solid #f1c40f;
-      white-space: pre-wrap; /* so \n works nicely */
+      background: color-mix(in srgb, var(--accent) 10%, transparent);
+      border: 1px solid var(--accent);
+      white-space: pre-wrap;
+      animation: popIn 0.25s ease-out;
     }
+
     #status {
       font-size: 12px;
-      color: #666;
+      color: #9ca3af;
       margin-top: 6px;
       text-align: center;
     }
+
     table {
       width: 100%;
       border-collapse: collapse;
       margin-top: 8px;
       font-size: 13px;
     }
+
     th, td {
-      border: 1px solid #ddd;
+      border: 1px solid #374151;
       padding: 6px;
       text-align: left;
       vertical-align: top;
     }
+
     th {
-      background: #f5f5f5;
+      background: #111827;
+      color: #e5e7eb;
     }
+
     #wheelWrapper {
       text-align: center;
       margin-top: 8px;
     }
+
     #pointer {
       width: 0;
       height: 0;
       border-left: 12px solid transparent;
       border-right: 12px solid transparent;
-      border-bottom: 20px solid #e74c3c;
+      border-bottom: 20px solid var(--danger);
       margin: 0 auto 4px;
     }
+
     #wheelCanvas {
       max-width: 100%;
       height: auto;
       touch-action: none;
+      border-radius: 999px;
+      transition: box-shadow 0.25s ease;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
     }
+
     .subtext {
       font-size: 12px;
-      color: #777;
+      color: #9ca3af;
       margin-top: 4px;
+    }
+
+    .top-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .toggle-small {
+      width: auto;
+      padding: 6px 10px;
+      font-size: 13px;
+      box-shadow: none;
+    }
+
+    select {
+      width: 100%;
+      padding: 6px;
+      border-radius: 8px;
+      border: 1px solid #4b5563;
+      background: transparent;
+      color: inherit;
+      font-size: 13px;
+    }
+
+    /* Animations */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes popIn {
+      from { opacity: 0; transform: scale(0.96); }
+      to { opacity: 1; transform: scale(1); }
     }
   </style>
 </head>
 <body>
   <h1>Most Likely Game</h1>
 
-  <!-- SETUP (shown at start, hidden after Start game) -->
-  <div id="setupCard" class="card">
-    <p>Enter player names (comma-separated):</p>
+  <!-- HOME SCREEN -->
+  <div id="homeCard" class="card fade-in">
+    <div class="top-row">
+      <div>
+        <strong>Party mode</strong>
+        <p class="subtext" style="margin-top:2px;">Spin, rank, and regret your friendships.</p>
+      </div>
+      <button id="darkModeBtn" class="toggle-small secondary-btn" onclick="toggleDarkMode()">
+        🌙 Dark: Off
+      </button>
+    </div>
+
+    <div class="toggle-row">
+      <label style="font-size:13px;">Theme:</label>
+      <select id="themeSelect" onchange="changeTheme(this.value)">
+        <option value="classic">Classic</option>
+        <option value="neon">Neon</option>
+        <option value="sunset">Sunset</option>
+      </select>
+    </div>
+
+    <button onclick="goToAddPlayers()" style="margin-top:12px;">
+      ▶️ Start game
+    </button>
+    <button onclick="goToHowToPlay()" class="secondary-btn">
+      ❓ How to play
+    </button>
+    <button onclick="goToViewQuestions()" class="secondary-btn">
+      📜 Show all questions
+    </button>
+  </div>
+
+  <!-- HOW TO PLAY SCREEN -->
+  <div id="howToCard" class="card" style="display:none;">
+    <h2 style="font-size:18px;margin-top:0;">How to Play</h2>
+    <ol class="subtext" style="color:inherit;">
+      <li>On the home screen, tap <strong>Start game</strong> and add player names.</li>
+      <li>Spin the wheel to choose a judge. Only they see the questions.</li>
+      <li>The judge can press <strong>“Give me a question”</strong> up to 3 times:
+        <br>– 1st & 2nd: re-rolls
+        <br>– 3rd: final question, they have to answer.
+      </li>
+      <li>When you’re done, tap <strong>End Game</strong> to see the final history and custom questions.</li>
+    </ol>
+    <button onclick="backToHome()" class="secondary-btn">
+      ⬅️ Back to home
+    </button>
+  </div>
+
+  <!-- ADD PLAYERS SCREEN -->
+  <div id="addPlayersCard" class="card" style="display:none;">
+    <h2 style="font-size:18px;margin-top:0;">Add players</h2>
+    <p class="subtext">Enter names, separated by commas.</p>
     <textarea id="namesInput" rows="3"
       placeholder="Alex, Sam, Jamie, Taylor"></textarea>
 
     <button onclick="savePlayers()">Save players</button>
-    <button onclick="startGame()" id="startButton">
-      ▶️ Start game
+    <button onclick="startGame()">
+      ▶️ Continue to wheel
     </button>
-
-    <!-- Extra navigation buttons -->
-    <button onclick="goToViewQuestions()" class="secondary-btn">
-      📜 View all questions
-    </button>
-    <button onclick="goToAddQuestions()" class="secondary-btn">
-      ➕ Add questions
-    </button>
-
     <p id="playersSaved" class="subtext"></p>
+
+    <button onclick="backToHome()" class="secondary-btn" style="margin-top:12px;">
+      ⬅️ Back to home
+    </button>
   </div>
 
   <!-- VIEW QUESTIONS SCREEN -->
   <div id="viewQuestionsCard" class="card" style="display:none;">
     <h2 style="font-size:18px;margin-top:0;">All Questions</h2>
-    <p class="subtext">Base questions + any custom ones you've added.</p>
+    <p class="subtext">Base questions + any custom ones on this device.</p>
     <div id="questionsList"></div>
-    <button onclick="backToSetup()" class="secondary-btn" style="margin-top:12px;">
-      ⬅️ Back
+    <button onclick="goToAddQuestions()" class="secondary-btn">
+      ➕ Add more questions
+    </button>
+    <button onclick="backToHome()" class="secondary-btn" style="margin-top:12px;">
+      ⬅️ Back to home
     </button>
   </div>
 
@@ -158,7 +332,7 @@
   <div id="addQuestionsCard" class="card" style="display:none;">
     <h2 style="font-size:18px;margin-top:0;">Add a Question</h2>
     <p class="subtext">
-      New questions are saved in this browser and added to the deck.
+      New questions are saved only on this device and added to the deck.
     </p>
     <input id="newQuestionInput" type="text"
            placeholder="Type a new question here...">
@@ -169,12 +343,12 @@
       🧹 Clear all custom questions
     </button>
     <p id="addQuestionStatus" class="subtext"></p>
-    <button onclick="backToSetup()" class="secondary-btn" style="margin-top:12px;">
-      ⬅️ Back
+    <button onclick="backToHome()" class="secondary-btn" style="margin-top:12px;">
+      ⬅️ Back to home
     </button>
   </div>
 
-  <!-- GAME (hidden at first) -->
+  <!-- GAME SCREEN -->
   <div id="gameCard" class="card" style="display:none;">
     <h2 style="font-size:18px;margin:0 0 4px;">Judge selection</h2>
     <p class="subtext">Spin the wheel to choose who goes next.</p>
@@ -189,7 +363,7 @@
     <!-- Big judge name -->
     <div id="playerDisplay"></div>
 
-    <!-- Question area: button just below name -->
+    <!-- Question area -->
     <div id="questionArea" style="margin-top:12px;">
       <button onclick="getQuestion()">❓ Give me a question</button>
       <div id="questionDisplay"></div>
@@ -203,9 +377,9 @@
     </button>
   </div>
 
-  <!-- GAME OVER (hidden at first) -->
+  <!-- GAME OVER SCREEN -->
   <div id="gameOverCard" class="card" style="display:none;">
-    <h2 style="color:#c0392b;font-size:20px;margin-top:0;">GAME OVER</h2>
+    <h2 style="color:var(--danger);font-size:20px;margin-top:0;">GAME OVER</h2>
     <p class="subtext">Final question each person ended on:</p>
     <div id="finalHistory"></div>
 
@@ -223,7 +397,7 @@
 
   <!-- Main game script -->
   <script>
-    // 1) BASE QUESTIONS come from questions.js
+    // 1) BASE QUESTIONS from questions.js
     const BASE_QUESTIONS = Array.isArray(window.BASE_QUESTIONS)
       ? window.BASE_QUESTIONS
       : [];
@@ -258,19 +432,19 @@
 
     function clearCustomQuestions() {
       const sure = confirm(
-        "Clear ALL custom questions from this device?\n(This will not touch questions.js.)"
+        "Clear ALL custom questions from this device?\n(This will not change questions.js.)"
       );
       if (!sure) return;
 
-      // Remove custom questions from memory
       customQuestions = [];
       saveCustomQuestions();
 
-      // Also remove any remaining custom questions from the current deck
-      remainingQuestions = remainingQuestions.filter(q => !customQuestions.includes(q));
+      // Rebuild remainingQuestions from base only
+      remainingQuestions = [...BASE_QUESTIONS];
 
       document.getElementById('addQuestionStatus').textContent =
         "Custom question list cleared for this device.";
+      updateStatus();
     }
 
     function getAllQuestions() {
@@ -283,7 +457,7 @@
 
     let currentPlayerIndex = null;
     let lastPlayerWithQuestion = null;
-    let history = []; // logs every roll with a turnId, but we display only final per turn
+    let history = []; // logs every roll with a turnId, display only final per turn
 
     // per-turn limit: 3 questions max
     let currentTurnQuestionCount = 0;
@@ -295,30 +469,80 @@
     let wheelAngle = 0;
     let isSpinning = false;
 
-    // ---- SETUP / NAVIGATION ----
-    function showOnlySetup() {
-      document.getElementById('setupCard').style.display = 'block';
-      document.getElementById('viewQuestionsCard').style.display = 'none';
-      document.getElementById('addQuestionsCard').style.display = 'none';
+    // THEME & DARK MODE
+    function applyTheme(theme) {
+      document.body.classList.remove('theme-classic', 'theme-neon', 'theme-sunset');
+      const className = 'theme-' + theme;
+      document.body.classList.add(className);
+      localStorage.setItem('ml_theme', theme);
+      const select = document.getElementById('themeSelect');
+      if (select && select.value !== theme) {
+        select.value = theme;
+      }
+    }
+
+    function applyDarkMode(enabled) {
+      if (enabled) {
+        document.body.classList.add('dark');
+      } else {
+        document.body.classList.remove('dark');
+      }
+      localStorage.setItem('ml_darkMode', enabled ? '1' : '0');
+      const btn = document.getElementById('darkModeBtn');
+      if (btn) {
+        btn.textContent = enabled ? "🌙 Dark: On" : "🌙 Dark: Off";
+      }
+    }
+
+    function changeTheme(theme) {
+      applyTheme(theme);
+    }
+
+    function toggleDarkMode() {
+      const enabled = !document.body.classList.contains('dark');
+      applyDarkMode(enabled);
+    }
+
+    // NAVIGATION
+    function hideAllScreens() {
+      ['homeCard','howToCard','addPlayersCard','viewQuestionsCard',
+       'addQuestionsCard','gameCard','gameOverCard'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+      });
+    }
+
+    function backToHome() {
+      hideAllScreens();
+      document.getElementById('homeCard').style.display = 'block';
+      document.getElementById('homeCard').classList.add('fade-in');
+    }
+
+    function goToHowToPlay() {
+      hideAllScreens();
+      document.getElementById('howToCard').style.display = 'block';
+      document.getElementById('howToCard').classList.add('fade-in');
+    }
+
+    function goToAddPlayers() {
+      hideAllScreens();
+      document.getElementById('addPlayersCard').style.display = 'block';
+      document.getElementById('addPlayersCard').classList.add('fade-in');
     }
 
     function goToViewQuestions() {
       renderQuestionsList();
-      document.getElementById('setupCard').style.display = 'none';
-      document.getElementById('addQuestionsCard').style.display = 'none';
+      hideAllScreens();
       document.getElementById('viewQuestionsCard').style.display = 'block';
+      document.getElementById('viewQuestionsCard').classList.add('fade-in');
     }
 
     function goToAddQuestions() {
       document.getElementById('addQuestionStatus').textContent = "";
       document.getElementById('newQuestionInput').value = "";
-      document.getElementById('setupCard').style.display = 'none';
-      document.getElementById('viewQuestionsCard').style.display = 'none';
+      hideAllScreens();
       document.getElementById('addQuestionsCard').style.display = 'block';
-    }
-
-    function backToSetup() {
-      showOnlySetup();
+      document.getElementById('addQuestionsCard').classList.add('fade-in');
     }
 
     function renderQuestionsList() {
@@ -346,11 +570,9 @@
         return;
       }
 
-      // Add to custom list & save
       customQuestions.push(text);
       saveCustomQuestions();
 
-      // Also add to remainingQuestions for this session
       remainingQuestions.push(text);
 
       input.value = "";
@@ -358,6 +580,7 @@
       updateStatus();
     }
 
+    // PLAYERS
     function savePlayers() {
       const text = document.getElementById('namesInput').value;
       players = text.split(',')
@@ -376,24 +599,21 @@
     }
 
     function startGame() {
-      // If no players saved yet, try to save from textarea
       if (players.length === 0) {
         savePlayers();
-        if (players.length === 0) return; // still nothing
+        if (players.length === 0) return;
       }
 
-      // Hide all setup-related cards, show game
-      document.getElementById('setupCard').style.display = "none";
-      document.getElementById('viewQuestionsCard').style.display = "none";
-      document.getElementById('addQuestionsCard').style.display = "none";
-      document.getElementById('gameCard').style.display = "block";
+      hideAllScreens();
+      document.getElementById('gameCard').style.display = 'block';
+      document.getElementById('gameCard').classList.add('fade-in');
 
       document.getElementById('status').textContent =
         remainingQuestions.length + " questions available. Spin to start!";
       drawWheel();
     }
 
-    // ---- WHEEL ----
+    // WHEEL
     function drawWheel() {
       if (!wheelCtx || players.length === 0) {
         if (wheelCtx) {
@@ -422,13 +642,13 @@
         ctx.moveTo(0, 0);
         ctx.arc(0, 0, radius, startAngle, endAngle);
         ctx.closePath();
-        ctx.fillStyle = i % 2 === 0 ? "#f6d365" : "#fda085";
+        ctx.fillStyle = i % 2 === 0 ? "#f97316" : "#22c55e";
         ctx.fill();
-        ctx.strokeStyle = "#ffffff";
+        ctx.strokeStyle = "#111827";
         ctx.stroke();
 
         ctx.save();
-        ctx.fillStyle = "#333333";
+        ctx.fillStyle = "#111827";
         ctx.rotate(startAngle + segmentAngle / 2);
         ctx.textAlign = "right";
         ctx.font = "13px system-ui";
@@ -441,19 +661,18 @@
       ctx.beginPath();
       ctx.arc(centerX, centerY, 8, 0, 2 * Math.PI);
       ctx.fillStyle = "#ffffff";
+      ctx.strokeStyle = "#111827";
       ctx.fill();
-      ctx.strokeStyle = "#999999";
       ctx.stroke();
     }
 
     function spinWheel() {
       if (players.length === 0) {
-        alert("Set up your players and start the game first.");
+        alert("Add players first.");
         return;
       }
       if (isSpinning) return;
 
-      // Choose target index (not lastPlayerWithQuestion if possible)
       let availableIndices = players.map((_, i) => i);
       if (players.length > 1 && lastPlayerWithQuestion !== null) {
         availableIndices = availableIndices.filter(i => i !== lastPlayerWithQuestion);
@@ -487,13 +706,18 @@
           const chosenName = players[currentPlayerIndex];
           const pd = document.getElementById('playerDisplay');
           pd.textContent = chosenName;
+          pd.classList.add('fade-in');
 
           // new turn
           currentTurnId += 1;
           currentTurnQuestionCount = 0;
           updateStatus();
 
-          // auto-scroll to name on phones
+          // vibration on stop (phones)
+          if (navigator.vibrate) {
+            navigator.vibrate(120);
+          }
+
           pd.scrollIntoView({ behavior: "smooth", block: "center" });
         }
       }
@@ -501,7 +725,7 @@
       requestAnimationFrame(animate);
     }
 
-    // ---- QUESTIONS & TURN LIMIT ----
+    // QUESTIONS & TURN LIMIT
     function getQuestion() {
       if (currentPlayerIndex === null) {
         alert("Spin the wheel to choose a judge first!");
@@ -535,12 +759,12 @@
         prefix = "FINAL question (no more re-rolls):";
       }
 
-      document.getElementById('questionDisplay').textContent =
-        prefix + "\n\n" + question;
+      const qd = document.getElementById('questionDisplay');
+      qd.textContent = prefix + "\n\n" + question;
+      qd.classList.add('fade-in');
 
       lastPlayerWithQuestion = currentPlayerIndex;
 
-      // Log this roll with turnId; we will only show the last per turn
       history.push({
         player: playerName,
         question: question,
@@ -569,9 +793,8 @@
       document.getElementById('status').textContent = text;
     }
 
-    // ---- END GAME / NEW GAME ----
+    // END GAME / NEW GAME
     function endGame() {
-      // confirmation to avoid accidental presses
       const sure = confirm(
         "Are you sure you want to end the game?\nYou’ll see the final history and can’t continue this round."
       );
@@ -581,10 +804,9 @@
       if (history.length === 0) {
         html = "<p class='subtext'>No rounds were played.</p>";
       } else {
-        // Build a map of turnId -> last entry for that turn
         const finalByTurn = {};
         history.forEach(h => {
-          finalByTurn[h.turnId] = h; // later rolls overwrite earlier ones
+          finalByTurn[h.turnId] = h;
         });
 
         const turnIds = Object.keys(finalByTurn)
@@ -602,7 +824,7 @@
       }
       document.getElementById('finalHistory').innerHTML = html;
 
-      // Show all custom questions so you can copy them into questions.js
+      // Show all custom questions for copying into questions.js
       const customContainer = document.getElementById('customQuestionsList');
       if (customQuestions.length === 0) {
         customContainer.innerHTML =
@@ -616,10 +838,9 @@
         customContainer.innerHTML = listHtml;
       }
 
-      // hide game, show game over
-      document.getElementById('gameCard').style.display = "none";
-      document.getElementById('gameOverCard').style.display = "block";
-
+      hideAllScreens();
+      document.getElementById('gameOverCard').style.display = 'block';
+      document.getElementById('gameOverCard').classList.add('fade-in');
       document.getElementById('gameOverCard').scrollIntoView({ behavior: "smooth" });
     }
 
@@ -641,22 +862,28 @@
       document.getElementById('status').textContent =
         remainingQuestions.length + " questions available. Spin to start!";
 
-      // show setup, hide others
-      showOnlySetup();
-      document.getElementById('gameCard').style.display = "none";
-      document.getElementById('gameOverCard').style.display = "none";
+      hideAllScreens();
+      document.getElementById('homeCard').style.display = 'block';
+      document.getElementById('homeCard').classList.add('fade-in');
 
       drawWheel();
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
 
-    // ---- INIT ----
+    // INIT
     document.addEventListener('DOMContentLoaded', () => {
       loadCustomQuestions();
       remainingQuestions = getAllQuestions();
 
       wheelCanvas = document.getElementById('wheelCanvas');
       wheelCtx = wheelCanvas.getContext('2d');
+
+      // Apply saved theme + dark mode
+      const savedTheme = localStorage.getItem('ml_theme') || 'classic';
+      applyTheme(savedTheme);
+
+      const savedDark = localStorage.getItem('ml_darkMode') === '1';
+      applyDarkMode(savedDark);
 
       document.getElementById('status').textContent =
         remainingQuestions.length + " questions available. Spin to start!";
