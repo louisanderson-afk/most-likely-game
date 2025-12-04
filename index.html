@@ -203,14 +203,6 @@
       margin-bottom: 4px;
     }
 
-    .toggle-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-      margin-top: 8px;
-    }
-
     .toggle-small {
       width: auto;
       padding: 6px 10px;
@@ -218,14 +210,16 @@
       box-shadow: none;
     }
 
-    select {
-      width: 100%;
-      padding: 6px;
-      border-radius: 8px;
-      border: 1px solid #4b5563;
-      background: transparent;
-      color: inherit;
-      font-size: 13px;
+    /* Guessing buttons */
+    #guessOptionsContainer button {
+      text-align: left;
+      font-size: 14px;
+      white-space: normal;
+    }
+    #guessResult {
+      margin-top: 10px;
+      text-align: center;
+      font-size: 14px;
     }
 
     /* Animations */
@@ -260,15 +254,6 @@
       </button>
     </div>
 
-    <div class="toggle-row">
-      <label style="font-size:13px;">Theme:</label>
-      <select id="themeSelect" onchange="changeTheme(this.value)">
-        <option value="classic">Classic</option>
-        <option value="neon">Neon</option>
-        <option value="sunset">Sunset</option>
-      </select>
-    </div>
-
     <button onclick="goToAddPlayers()" style="margin-top:12px;">
       ▶️ Start game
     </button>
@@ -284,13 +269,17 @@
   <div id="howToCard" class="card" style="display:none;">
     <h2 style="font-size:18px;margin-top:0;">How to Play</h2>
     <ol class="subtext" style="color:inherit;">
-      <li>On the home screen, tap <strong>Start game</strong> and add player names.</li>
-      <li>Spin the wheel to choose a judge. Only they see the questions.</li>
+      <li>Tap <strong>Start game</strong> and add player names.</li>
+      <li>Spin the wheel to choose a judge. Only they see the question.</li>
       <li>The judge can press <strong>“Give me a question”</strong> up to 3 times:
-        <br>– 1st & 2nd: re-rolls
+        <br>– 1st &amp; 2nd: re-rolls
         <br>– 3rd: final question, they have to answer.
       </li>
-      <li>When you’re done, tap <strong>End Game</strong> to see the final history and custom questions.</li>
+      <li>Optionally:
+        <br>– Use <strong>Guess mode</strong> so others pick from 5 possible questions.
+        <br>– Use <strong>Reveal big screen</strong> to show the final question dramatically.
+      </li>
+      <li>Tap <strong>End Game</strong> to see the final history and custom questions.</li>
     </ol>
     <button onclick="backToHome()" class="secondary-btn">
       ⬅️ Back to home
@@ -369,11 +358,53 @@
       <div id="questionDisplay"></div>
     </div>
 
+    <!-- New: guessing + reveal buttons -->
+    <button onclick="startGuessMode()" class="secondary-btn">
+      🔍 Let others guess the question
+    </button>
+    <button onclick="showRevealScreen()" class="secondary-btn">
+      🧾 Reveal question (big screen)
+    </button>
+
     <p id="status"></p>
 
-    <!-- END GAME BUTTON (at the very bottom) -->
+    <!-- END GAME BUTTON -->
     <button onclick="endGame()" class="danger-btn" style="margin-top:12px;">
       🚨 End Game
+    </button>
+  </div>
+
+  <!-- REVEAL QUESTION (BIG SCREEN) -->
+  <div id="revealCard" class="card" style="display:none;">
+    <h2 style="font-size:18px;margin-top:0;">Final Question</h2>
+    <p class="subtext">Show this on the TV / in the middle of the group.</p>
+    <div id="revealQuestionText" style="
+      margin-top:12px;
+      font-size:20px;
+      font-weight:700;
+      text-align:center;
+      padding:14px;
+      border-radius:12px;
+      background: color-mix(in srgb, var(--accent) 15%, transparent);
+      border:1px solid var(--accent);
+      white-space:pre-wrap;
+    "></div>
+    <button onclick="backToGameFromReveal()" class="secondary-btn" style="margin-top:12px;">
+      ⬅️ Back to game
+    </button>
+  </div>
+
+  <!-- GUESSING MODE SCREEN -->
+  <div id="guessCard" class="card" style="display:none;">
+    <h2 style="font-size:18px;margin-top:0;">Guess the Question</h2>
+    <p class="subtext">
+      The judge had one secret question. Pick which one you think it was.<br>
+      You get <strong>2 guesses</strong>. If you don’t get it, the real answer stays secret.
+    </p>
+    <div id="guessOptionsContainer" style="margin-top:8px;"></div>
+    <div id="guessResult" class="subtext"></div>
+    <button onclick="backToGameFromGuess()" class="secondary-btn" style="margin-top:12px;">
+      ⬅️ Back to game
     </button>
   </div>
 
@@ -464,6 +495,14 @@
     const MAX_QUESTIONS_PER_TURN = 3;
     let currentTurnId = 0; // increments each time the wheel selects a judge
 
+    // Track current question for reveal/guess mode
+    let currentQuestionText = null;
+
+    // Guess mode state
+    let guessOptions = [];
+    let correctGuessIndex = null;
+    let guessAttempts = 0;
+
     // Wheel
     let wheelCanvas, wheelCtx;
     let wheelAngle = 0;
@@ -475,10 +514,6 @@
       const className = 'theme-' + theme;
       document.body.classList.add(className);
       localStorage.setItem('ml_theme', theme);
-      const select = document.getElementById('themeSelect');
-      if (select && select.value !== theme) {
-        select.value = theme;
-      }
     }
 
     function applyDarkMode(enabled) {
@@ -494,10 +529,6 @@
       }
     }
 
-    function changeTheme(theme) {
-      applyTheme(theme);
-    }
-
     function toggleDarkMode() {
       const enabled = !document.body.classList.contains('dark');
       applyDarkMode(enabled);
@@ -505,8 +536,10 @@
 
     // NAVIGATION
     function hideAllScreens() {
-      ['homeCard','howToCard','addPlayersCard','viewQuestionsCard',
-       'addQuestionsCard','gameCard','gameOverCard'].forEach(id => {
+      [
+        'homeCard','howToCard','addPlayersCard','viewQuestionsCard',
+        'addQuestionsCard','gameCard','gameOverCard','revealCard','guessCard'
+      ].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.style.display = 'none';
       });
@@ -514,35 +547,40 @@
 
     function backToHome() {
       hideAllScreens();
-      document.getElementById('homeCard').style.display = 'block';
-      document.getElementById('homeCard').classList.add('fade-in');
+      const c = document.getElementById('homeCard');
+      c.style.display = 'block';
+      c.classList.add('fade-in');
     }
 
     function goToHowToPlay() {
       hideAllScreens();
-      document.getElementById('howToCard').style.display = 'block';
-      document.getElementById('howToCard').classList.add('fade-in');
+      const c = document.getElementById('howToCard');
+      c.style.display = 'block';
+      c.classList.add('fade-in');
     }
 
     function goToAddPlayers() {
       hideAllScreens();
-      document.getElementById('addPlayersCard').style.display = 'block';
-      document.getElementById('addPlayersCard').classList.add('fade-in');
+      const c = document.getElementById('addPlayersCard');
+      c.style.display = 'block';
+      c.classList.add('fade-in');
     }
 
     function goToViewQuestions() {
       renderQuestionsList();
       hideAllScreens();
-      document.getElementById('viewQuestionsCard').style.display = 'block';
-      document.getElementById('viewQuestionsCard').classList.add('fade-in');
+      const c = document.getElementById('viewQuestionsCard');
+      c.style.display = 'block';
+      c.classList.add('fade-in');
     }
 
     function goToAddQuestions() {
       document.getElementById('addQuestionStatus').textContent = "";
       document.getElementById('newQuestionInput').value = "";
       hideAllScreens();
-      document.getElementById('addQuestionsCard').style.display = 'block';
-      document.getElementById('addQuestionsCard').classList.add('fade-in');
+      const c = document.getElementById('addQuestionsCard');
+      c.style.display = 'block';
+      c.classList.add('fade-in');
     }
 
     function renderQuestionsList() {
@@ -605,8 +643,9 @@
       }
 
       hideAllScreens();
-      document.getElementById('gameCard').style.display = 'block';
-      document.getElementById('gameCard').classList.add('fade-in');
+      const c = document.getElementById('gameCard');
+      c.style.display = 'block';
+      c.classList.add('fade-in');
 
       document.getElementById('status').textContent =
         remainingQuestions.length + " questions available. Spin to start!";
@@ -683,6 +722,9 @@
       isSpinning = true;
       document.getElementById('playerDisplay').textContent = "Spinning…";
       document.getElementById('questionDisplay').textContent = "";
+      currentQuestionText = null;
+      guessOptions = [];
+      guessAttempts = 0;
 
       const extraRotations = 4 + Math.random() * 2;
       const extraAngle = extraRotations * 2 * Math.PI;
@@ -749,6 +791,9 @@
       const playerName = players[currentPlayerIndex];
 
       currentTurnQuestionCount += 1;
+      currentQuestionText = question;
+      guessOptions = [];
+      guessAttempts = 0;
 
       let prefix = "";
       if (currentTurnQuestionCount === 1) {
@@ -793,6 +838,104 @@
       document.getElementById('status').textContent = text;
     }
 
+    // REVEAL MODE
+    function showRevealScreen() {
+      if (!currentQuestionText) {
+        alert("You need a question first. Press 'Give me a question'.");
+        return;
+      }
+      hideAllScreens();
+      const textEl = document.getElementById('revealQuestionText');
+      textEl.textContent = currentQuestionText;
+      const c = document.getElementById('revealCard');
+      c.style.display = 'block';
+      c.classList.add('fade-in');
+    }
+
+    function backToGameFromReveal() {
+      hideAllScreens();
+      const c = document.getElementById('gameCard');
+      c.style.display = 'block';
+      c.classList.add('fade-in');
+    }
+
+    // GUESS MODE
+    function startGuessMode() {
+      if (!currentQuestionText) {
+        alert("You need a question first. Press 'Give me a question'.");
+        return;
+      }
+
+      const correct = currentQuestionText;
+      const all = getAllQuestions().filter(q => q !== correct);
+      const distractors = [];
+      const maxDistractors = Math.min(4, all.length);
+      const pool = [...all];
+
+      for (let i = 0; i < maxDistractors; i++) {
+        if (pool.length === 0) break;
+        const idx = Math.floor(Math.random() * pool.length);
+        distractors.push(pool.splice(idx, 1)[0]);
+      }
+
+      guessOptions = [correct, ...distractors];
+      // shuffle
+      for (let i = guessOptions.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [guessOptions[i], guessOptions[j]] = [guessOptions[j], guessOptions[i]];
+      }
+      correctGuessIndex = guessOptions.indexOf(correct);
+      guessAttempts = 0;
+
+      const container = document.getElementById('guessOptionsContainer');
+      container.innerHTML = "";
+      guessOptions.forEach((q, index) => {
+        const btn = document.createElement('button');
+        btn.className = "secondary-btn";
+        btn.textContent = q;
+        btn.onclick = () => handleGuessClick(index);
+        container.appendChild(btn);
+      });
+
+      document.getElementById('guessResult').textContent = "";
+
+      hideAllScreens();
+      const c = document.getElementById('guessCard');
+      c.style.display = 'block';
+      c.classList.add('fade-in');
+    }
+
+    function handleGuessClick(index) {
+      const resultEl = document.getElementById('guessResult');
+      const buttons = document.querySelectorAll('#guessOptionsContainer button');
+
+      if (guessAttempts >= 2) {
+        alert("No more guesses this round!");
+        return;
+      }
+
+      if (index === correctGuessIndex) {
+        resultEl.textContent = "✅ Correct! You guessed the question.";
+        buttons.forEach(b => b.disabled = true);
+        guessAttempts = 999;
+      } else {
+        guessAttempts++;
+        if (guessAttempts < 2) {
+          resultEl.textContent = "❌ Nope! Try one more time.";
+        } else {
+          resultEl.textContent = "❌ No more guesses. The real question stays secret.";
+          buttons.forEach(b => b.disabled = true);
+        }
+      }
+    }
+
+    function backToGameFromGuess() {
+      hideAllScreens();
+      const c = document.getElementById('gameCard');
+      c.style.display = 'block';
+      c.classList.add('fade-in');
+    }
+
     // END GAME / NEW GAME
     function endGame() {
       const sure = confirm(
@@ -824,7 +967,6 @@
       }
       document.getElementById('finalHistory').innerHTML = html;
 
-      // Show all custom questions for copying into questions.js
       const customContainer = document.getElementById('customQuestionsList');
       if (customQuestions.length === 0) {
         customContainer.innerHTML =
@@ -839,9 +981,10 @@
       }
 
       hideAllScreens();
-      document.getElementById('gameOverCard').style.display = 'block';
-      document.getElementById('gameOverCard').classList.add('fade-in');
-      document.getElementById('gameOverCard').scrollIntoView({ behavior: "smooth" });
+      const c = document.getElementById('gameOverCard');
+      c.style.display = 'block';
+      c.classList.add('fade-in');
+      c.scrollIntoView({ behavior: "smooth" });
     }
 
     function newGame() {
@@ -854,6 +997,9 @@
       isSpinning = false;
       currentTurnQuestionCount = 0;
       currentTurnId = 0;
+      currentQuestionText = null;
+      guessOptions = [];
+      guessAttempts = 0;
 
       document.getElementById('namesInput').value = "";
       document.getElementById('playersSaved').textContent = "";
@@ -863,8 +1009,9 @@
         remainingQuestions.length + " questions available. Spin to start!";
 
       hideAllScreens();
-      document.getElementById('homeCard').style.display = 'block';
-      document.getElementById('homeCard').classList.add('fade-in');
+      const c = document.getElementById('homeCard');
+      c.style.display = 'block';
+      c.classList.add('fade-in');
 
       drawWheel();
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -878,9 +1025,8 @@
       wheelCanvas = document.getElementById('wheelCanvas');
       wheelCtx = wheelCanvas.getContext('2d');
 
-      // Apply saved theme + dark mode
-      const savedTheme = localStorage.getItem('ml_theme') || 'classic';
-      applyTheme(savedTheme);
+      // Always default to classic theme
+      applyTheme('classic');
 
       const savedDark = localStorage.getItem('ml_darkMode') === '1';
       applyDarkMode(savedDark);
