@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Most Likely Game</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      max-width: 600px;
+      margin: 20px auto;
+      padding: 16px;
+    }
+    h1 {
+      text-align: center;
+    }
+    .card {
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      padding: 16px;
+      margin-top: 16px;
+    }
+    textarea {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 8px;
+    }
+    button {
+      padding: 10px 18px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      margin-top: 8px;
+      font-size: 15px;
+    }
+    #playerDisplay, #questionDisplay {
+      margin-top: 12px;
+      font-size: 18px;
+      font-weight: 600;
+    }
+    #status {
+      font-size: 12px;
+      color: #666;
+      margin-top: 6px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 8px;
+      font-size: 14px;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 6px;
+      text-align: left;
+    }
+    th {
+      background: #f5f5f5;
+    }
+  </style>
+</head>
+<body>
+  <h1>Most Likely Game</h1>
+
+  <!-- SETUP -->
+  <div id="setupCard" class="card">
+    <p>Enter player names, separated by commas:</p>
+    <textarea id="namesInput" rows="3"
+      placeholder="Alex, Sam, Jamie, Taylor"></textarea>
+    <button onclick="savePlayers()">Save players</button>
+    <!-- NEW: Start game button -->
+    <button onclick="startGame()" id="startButton" style="margin-left:8px;">
+      ▶️ Start game
+    </button>
+    <p id="playersSaved" style="font-size:12px;color:#666;"></p>
+  </div>
+
+  <!-- GAME CONTROLS -->
+  <div id="gameCard" class="card" style="display:none;">
+    <button onclick="pickRandomPlayer()">🎲 Pick random player</button>
+    <div id="playerDisplay"></div>
+
+    <button onclick="getQuestion()">❓ Give me a question</button>
+    <div id="questionDisplay"></div>
+
+    <p id="status"></p>
+
+    <button onclick="resetQuestions()" style="margin-top:12px;">
+      Reset questions
+    </button>
+
+    <!-- END GAME BUTTON -->
+    <button onclick="endGame()" style="margin-top:12px;background:#e74c3c;color:white;">
+      🚨 End Game
+    </button>
+  </div>
+
+  <!-- HISTORY (shown during game, hidden on game over) -->
+  <div id="historyCard" class="card" style="display:none;">
+    <h2>History</h2>
+    <p style="font-size:12px;color:#666;">
+      Shows which player got which question this session.
+    </p>
+    <div id="historyContainer"></div>
+    <button onclick="clearHistory()" style="margin-top:8px;">
+      Clear history
+    </button>
+  </div>
+
+  <!-- GAME OVER SCREEN -->
+  <div id="gameOverCard" class="card" style="display:none;">
+    <h2 style="color:#c0392b;">GAME OVER</h2>
+    <p>Here is the full history of the game:</p>
+    <div id="finalHistory"></div>
+    <button onclick="newGame()" style="margin-top:12px;">
+      🔁 New game
+    </button>
+  </div>
+
+  <script>
+    // 1) ADD YOUR FULL QUESTION LIST HERE
+    const ALL_QUESTIONS = [
+      "Most likely to be the loudest during sex",
+      "Most likely to cheat",
+      "Most vanilla",
+      "Most likely to be a failure",
+      "Most likely to make you cum",
+      "Most likely to enjoy anal",
+      "Most likely to commit",
+      "Most likely to get pegged/peg",
+      "Most likely to have a sex change",
+      "Best at head",
+      "Most likely to be the best kisser",
+      "Most ripped",
+      "Biggest arsehole (figuratively)",
+      "Biggest simp",
+      "Most likely to OD"
+      // ... add your full list ...
+    ];
+
+    // 2) GAME STATE
+    let players = [];
+    let remainingQuestions = [...ALL_QUESTIONS];
+
+    let currentPlayerIndex = null;
+    let lastPlayerWithQuestion = null;
+    let history = [];
+
+    function savePlayers() {
+      const text = document.getElementById('namesInput').value;
+      players = text.split(',')
+                    .map(n => n.trim())
+                    .filter(n => n.length > 0);
+
+      if (players.length === 0) {
+        alert("Add at least one player name.");
+        return;
+      }
+
+      document.getElementById('playersSaved').textContent =
+        "Players saved: " + players.join(", ");
+    }
+
+    // NEW: explicit start game
+    function startGame() {
+      // If players haven't been saved yet, try saving them now
+      if (players.length === 0) {
+        savePlayers();
+        if (players.length === 0) {
+          // still no players, abort
+          return;
+        }
+      }
+
+      // Show game + history, keep setup visible if you like or hide it
+      document.getElementById('gameCard').style.display = "block";
+      document.getElementById('historyCard').style.display = "block";
+
+      // Initial status
+      document.getElementById('status').textContent =
+        remainingQuestions.length + " questions available.";
+    }
+
+    function pickRandomPlayer() {
+      if (players.length === 0) {
+        alert("Save your players first and start the game!");
+        return;
+      }
+
+      if (players.length === 1) {
+        currentPlayerIndex = 0;
+      } else {
+        let idx;
+        // avoid same player as last time
+        do {
+          idx = Math.floor(Math.random() * players.length);
+        } while (idx === lastPlayerWithQuestion);
+        currentPlayerIndex = idx;
+      }
+
+      document.getElementById('playerDisplay').textContent =
+        "Chosen player: " + players[currentPlayerIndex];
+    }
+
+    function getQuestion() {
+      if (currentPlayerIndex === null) {
+        alert("Pick a player first!");
+        return;
+      }
+
+      if (remainingQuestions.length === 0) {
+        document.getElementById('questionDisplay').textContent =
+          "No questions left. Reset to start again.";
+        return;
+      }
+
+      const idx = Math.floor(Math.random() * remainingQuestions.length);
+      const question = remainingQuestions.splice(idx, 1)[0];
+
+      const playerName = players[currentPlayerIndex];
+
+      document.getElementById('questionDisplay').textContent =
+        "Question for " + playerName + ": " + question;
+
+      document.getElementById('status').textContent =
+        remainingQuestions.length + " questions remaining.";
+
+      lastPlayerWithQuestion = currentPlayerIndex;
+
+      history.push({
+        round: history.length + 1,
+        player: playerName,
+        question: question
+      });
+
+      renderHistory();
+    }
+
+    function resetQuestions() {
+      remainingQuestions = [...ALL_QUESTIONS];
+      document.getElementById('questionDisplay').textContent = "";
+      document.getElementById('status').textContent =
+        remainingQuestions.length + " questions available.";
+    }
+
+    function clearHistory() {
+      history = [];
+      renderHistory();
+    }
+
+    function renderHistory() {
+      const c = document.getElementById('historyContainer');
+
+      if (history.length === 0) {
+        c.innerHTML = "<p style='font-size:12px;color:#666;'>No history yet.</p>";
+        return;
+      }
+
+      let html = "<table><tr><th>#</th><th>Player</th><th>Question</th></tr>";
+      history.forEach(h => {
+        html += `<tr><td>${h.round}</td><td>${h.player}</td><td>${h.question}</td></tr>`;
+      });
+      html += "</table>";
+
+      c.innerHTML = html;
+    }
+
+    function endGame() {
+      // Hide setup + active game + live history
+      document.getElementById('gameCard').style.display = "none";
+      document.getElementById('setupCard').style.display = "none";
+      document.getElementById('historyCard').style.display = "none";
+
+      // Show final game over screen
+      document.getElementById('gameOverCard').style.display = "block";
+
+      // Display final history
+      let html;
+      if (history.length === 0) {
+        html = "<p style='font-size:12px;color:#666;'>No rounds were played.</p>";
+      } else {
+        html = "<table><tr><th>#</th><th>Player</th><th>Question</th></tr>";
+        history.forEach(h => {
+          html += `<tr><td>${h.round}</td><td>${h.player}</td><td>${h.question}</td></tr>`;
+        });
+        html += "</table>";
+      }
+
+      document.getElementById('finalHistory').innerHTML = html;
+    }
+
+    // NEW: start over completely
+    function newGame() {
+      players = [];
+      remainingQuestions = [...ALL_QUESTIONS];
+      currentPlayerIndex = null;
+      lastPlayerWithQuestion = null;
+      history = [];
+
+      // Reset UI
+      document.getElementById('namesInput').value = "";
+      document.getElementById('playersSaved').textContent = "";
+      document.getElementById('playerDisplay').textContent = "";
+      document.getElementById('questionDisplay').textContent = "";
+      document.getElementById('status').textContent =
+        remainingQuestions.length + " questions available.";
+
+      document.getElementById('historyContainer').innerHTML =
+        "<p style='font-size:12px;color:#666;'>No history yet.</p>";
+
+      // Show setup, hide game + game over
+      document.getElementById('setupCard').style.display = "block";
+      document.getElementById('gameCard').style.display = "none";
+      document.getElementById('historyCard').style.display = "none";
+      document.getElementById('gameOverCard').style.display = "none";
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      // Initial history text
+      renderHistory();
+      // Initial status (before game started)
+      document.getElementById('status').textContent =
+        remainingQuestions.length + " questions available.";
+    });
+  </script>
+</body>
+</html>
