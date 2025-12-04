@@ -3,63 +3,89 @@
 <head>
   <meta charset="UTF-8">
   <title>Most Likely Game</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
+    * {
+      box-sizing: border-box;
+    }
     body {
-      font-family: system-ui, sans-serif;
-      max-width: 600px;
-      margin: 20px auto;
-      padding: 16px;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      max-width: 480px;           /* nice on phones */
+      margin: 0 auto;
+      padding: 12px;
+      background: #fafafa;
     }
     h1 {
       text-align: center;
+      font-size: 22px;
+      margin: 8px 0 4px;
     }
     .card {
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      padding: 16px;
-      margin-top: 16px;
+      background: #ffffff;
+      border: 1px solid #e0e0e0;
+      border-radius: 12px;
+      padding: 14px;
+      margin-top: 12px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.04);
     }
     textarea {
       width: 100%;
-      box-sizing: border-box;
       padding: 8px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      resize: vertical;
+      font-size: 14px;
     }
     button {
-      padding: 10px 18px;
-      border-radius: 6px;
+      width: 100%;                /* full-width buttons for phones */
+      padding: 10px 14px;
+      border-radius: 10px;
       border: none;
       cursor: pointer;
       margin-top: 8px;
       font-size: 15px;
-    }
-    #playerDisplay, #questionDisplay {
-      margin-top: 12px;
-      font-size: 18px;
       font-weight: 600;
+      background: #3498db;
+      color: white;
+    }
+    button:active {
+      transform: scale(0.98);
+    }
+    #playerDisplay {
+      margin-top: 14px;
+      font-size: 28px;
+      font-weight: 800;
+      text-align: center;
+    }
+    #questionDisplay {
+      margin-top: 10px;
+      font-size: 16px;
+      text-align: center;
     }
     #status {
       font-size: 12px;
       color: #666;
       margin-top: 6px;
+      text-align: center;
     }
     table {
       width: 100%;
       border-collapse: collapse;
       margin-top: 8px;
-      font-size: 14px;
+      font-size: 13px;
     }
     th, td {
       border: 1px solid #ddd;
       padding: 6px;
       text-align: left;
+      vertical-align: top;
     }
     th {
       background: #f5f5f5;
     }
-    /* Wheel layout */
     #wheelWrapper {
       text-align: center;
-      margin-top: 12px;
+      margin-top: 8px;
     }
     #pointer {
       width: 0;
@@ -69,6 +95,22 @@
       border-bottom: 20px solid #e74c3c;
       margin: 0 auto 4px;
     }
+    #wheelCanvas {
+      max-width: 100%;
+      height: auto;
+      touch-action: none;
+    }
+    .secondary-btn {
+      background: #95a5a6;
+    }
+    .danger-btn {
+      background: #e74c3c;
+    }
+    .subtext {
+      font-size: 12px;
+      color: #777;
+      margin-top: 4px;
+    }
   </style>
 </head>
 <body>
@@ -76,60 +118,54 @@
 
   <!-- SETUP (shown at start, hidden after Start game) -->
   <div id="setupCard" class="card">
-    <p>Enter player names, separated by commas:</p>
+    <p>Enter player names (comma-separated):</p>
     <textarea id="namesInput" rows="3"
       placeholder="Alex, Sam, Jamie, Taylor"></textarea>
     <button onclick="savePlayers()">Save players</button>
-    <button onclick="startGame()" id="startButton" style="margin-left:8px;">
+    <button onclick="startGame()" id="startButton">
       ▶️ Start game
     </button>
-    <p id="playersSaved" style="font-size:12px;color:#666;"></p>
+    <p id="playersSaved" class="subtext"></p>
   </div>
 
   <!-- GAME (hidden at first) -->
   <div id="gameCard" class="card" style="display:none;">
-    <h2>Judge selection</h2>
+    <h2 style="font-size:18px;margin:0 0 4px;">Judge selection</h2>
+    <p class="subtext">Spin the wheel to choose who goes next.</p>
 
     <div id="wheelWrapper">
       <div id="pointer"></div>
-      <canvas id="wheelCanvas" width="300" height="300"></canvas>
+      <canvas id="wheelCanvas" width="280" height="280"></canvas>
     </div>
 
     <button onclick="spinWheel()">🎡 Spin to choose judge</button>
+
+    <!-- Big judge name -->
     <div id="playerDisplay"></div>
 
-    <hr style="margin:16px 0;">
-
-    <button onclick="getQuestion()">❓ Give me a question</button>
-    <div id="questionDisplay"></div>
+    <!-- Question area: button just below name -->
+    <div id="questionArea" style="margin-top:12px;">
+      <button onclick="getQuestion()">❓ Give me a question</button>
+      <div id="questionDisplay"></div>
+    </div>
 
     <p id="status"></p>
 
-    <button onclick="resetQuestions()" style="margin-top:12px;">
-      Reset questions
+    <!-- Reset questions -->
+    <button onclick="resetQuestions()" class="secondary-btn">
+      🔄 Reset questions
     </button>
 
-    <button onclick="endGame()" style="margin-top:12px;background:#e74c3c;color:white;">
+    <!-- END GAME BUTTON (always at very bottom of game card) -->
+    <button onclick="endGame()" class="danger-btn" style="margin-top:12px;">
       🚨 End Game
-    </button>
-  </div>
-
-  <!-- HISTORY (hidden at first, shown in game) -->
-  <div id="historyCard" class="card" style="display:none;">
-    <h2>History</h2>
-    <p style="font-size:12px;color:#666;">
-      Which player got which question this session.
-    </p>
-    <div id="historyContainer"></div>
-    <button onclick="clearHistory()" style="margin-top:8px;">
-      Clear history
     </button>
   </div>
 
   <!-- GAME OVER (hidden at first) -->
   <div id="gameOverCard" class="card" style="display:none;">
-    <h2 style="color:#c0392b;">GAME OVER</h2>
-    <p>Here is the full history of the game:</p>
+    <h2 style="color:#c0392b;font-size:20px;margin-top:0;">GAME OVER</h2>
+    <p class="subtext">Full history of this session:</p>
     <div id="finalHistory"></div>
     <button onclick="newGame()" style="margin-top:12px;">
       🔁 New game
@@ -154,7 +190,7 @@
       "Biggest arsehole (figuratively)",
       "Biggest simp",
       "Most likely to OD"
-      // ...add the rest of your list here...
+      // ...paste the rest of your questions here...
     ];
 
     // 2) GAME STATE
@@ -195,16 +231,14 @@
         if (players.length === 0) return; // still nothing
       }
 
-      // Hide setup, show game + history
+      // Hide setup, show game
       document.getElementById('setupCard').style.display = "none";
       document.getElementById('gameCard').style.display = "block";
-      document.getElementById('historyCard').style.display = "block";
 
       document.getElementById('status').textContent =
         remainingQuestions.length + " questions available.";
 
       drawWheel();
-      renderHistory();
     }
 
     // ---- WHEEL ----
@@ -218,7 +252,7 @@
 
       const ctx = wheelCtx;
       const canvas = wheelCanvas;
-      const radius = canvas.width / 2 - 10;
+      const radius = canvas.width / 2 - 8;
       const centerX = canvas.width / 2;
       const centerY = canvas.height / 2;
       const segmentAngle = 2 * Math.PI / players.length;
@@ -245,7 +279,7 @@
         ctx.fillStyle = "#333333";
         ctx.rotate(startAngle + segmentAngle / 2);
         ctx.textAlign = "right";
-        ctx.font = "14px system-ui";
+        ctx.font = "13px system-ui";
         ctx.fillText(players[i], radius - 10, 4);
         ctx.restore();
       }
@@ -267,7 +301,7 @@
       }
       if (isSpinning) return;
 
-      // choose target index (not lastPlayerWithQuestion if possible)
+      // Choose target index (not lastPlayerWithQuestion if possible)
       let availableIndices = players.map((_, i) => i);
       if (players.length > 1 && lastPlayerWithQuestion !== null) {
         availableIndices = availableIndices.filter(i => i !== lastPlayerWithQuestion);
@@ -277,6 +311,7 @@
 
       isSpinning = true;
       document.getElementById('playerDisplay').textContent = "Spinning…";
+      document.getElementById('questionDisplay').textContent = "";
 
       const extraRotations = 4 + Math.random() * 2;
       const extraAngle = extraRotations * 2 * Math.PI;
@@ -298,8 +333,11 @@
           isSpinning = false;
           currentPlayerIndex = targetIndex;
           const chosenName = players[currentPlayerIndex];
-          document.getElementById('playerDisplay').textContent =
-            "Judge: " + chosenName;
+          const pd = document.getElementById('playerDisplay');
+          pd.textContent = chosenName;
+
+          // auto-scroll to name on phones
+          pd.scrollIntoView({ behavior: "smooth", block: "center" });
         }
       }
 
@@ -324,7 +362,7 @@
       const playerName = players[currentPlayerIndex];
 
       document.getElementById('questionDisplay').textContent =
-        "Question for " + playerName + ": " + question;
+        "Question for " + playerName + ":\n" + question;
 
       document.getElementById('status').textContent =
         remainingQuestions.length + " questions remaining.";
@@ -336,7 +374,6 @@
         player: playerName,
         question: question
       });
-      renderHistory();
     }
 
     function resetQuestions() {
@@ -346,34 +383,11 @@
         remainingQuestions.length + " questions available.";
     }
 
-    function clearHistory() {
-      history = [];
-      renderHistory();
-    }
-
-    function renderHistory() {
-      const c = document.getElementById('historyContainer');
-
-      if (history.length === 0) {
-        c.innerHTML = "<p style='font-size:12px;color:#666;'>No history yet.</p>";
-        return;
-      }
-
-      let html = "<table><tr><th>#</th><th>Player</th><th>Question</th></tr>";
-      history.forEach(h => {
-        html += "<tr><td>" + h.round + "</td><td>" +
-                h.player + "</td><td>" + h.question + "</td></tr>";
-      });
-      html += "</table>";
-
-      c.innerHTML = html;
-    }
-
     // ---- END GAME / NEW GAME ----
     function endGame() {
       let html;
       if (history.length === 0) {
-        html = "<p style='font-size:12px;color:#666;'>No rounds were played.</p>";
+        html = "<p class='subtext'>No rounds were played.</p>";
       } else {
         html = "<table><tr><th>#</th><th>Player</th><th>Question</th></tr>";
         history.forEach(h => {
@@ -384,10 +398,11 @@
       }
       document.getElementById('finalHistory').innerHTML = html;
 
-      // hide game + history, show game over
+      // hide game, show game over
       document.getElementById('gameCard').style.display = "none";
-      document.getElementById('historyCard').style.display = "none";
       document.getElementById('gameOverCard').style.display = "block";
+
+      document.getElementById('gameOverCard').scrollIntoView({ behavior: "smooth" });
     }
 
     function newGame() {
@@ -405,16 +420,14 @@
       document.getElementById('questionDisplay').textContent = "";
       document.getElementById('status').textContent =
         remainingQuestions.length + " questions available.";
-      document.getElementById('historyContainer').innerHTML =
-        "<p style='font-size:12px;color:#666;'>No history yet.</p>";
 
       // show setup, hide others
       document.getElementById('setupCard').style.display = "block";
       document.getElementById('gameCard').style.display = "none";
-      document.getElementById('historyCard').style.display = "none";
       document.getElementById('gameOverCard').style.display = "none";
 
       drawWheel();
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
 
     // ---- INIT ----
@@ -424,7 +437,7 @@
 
       document.getElementById('status').textContent =
         remainingQuestions.length + " questions available.";
-      renderHistory();
+
       drawWheel();
     });
   </script>
