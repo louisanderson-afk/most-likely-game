@@ -28,7 +28,7 @@
       margin-top: 12px;
       box-shadow: 0 2px 6px rgba(0,0,0,0.04);
     }
-    textarea {
+    textarea, input[type="text"] {
       width: 100%;
       padding: 8px;
       border-radius: 8px;
@@ -50,6 +50,12 @@
     }
     button:active {
       transform: scale(0.98);
+    }
+    .secondary-btn {
+      background: #95a5a6;
+    }
+    .danger-btn {
+      background: #e74c3c;
     }
     #playerDisplay {
       margin-top: 14px;
@@ -106,9 +112,6 @@
       height: auto;
       touch-action: none;
     }
-    .danger-btn {
-      background: #e74c3c;
-    }
     .subtext {
       font-size: 12px;
       color: #777;
@@ -124,11 +127,51 @@
     <p>Enter player names (comma-separated):</p>
     <textarea id="namesInput" rows="3"
       placeholder="Alex, Sam, Jamie, Taylor"></textarea>
+
     <button onclick="savePlayers()">Save players</button>
     <button onclick="startGame()" id="startButton">
       ▶️ Start game
     </button>
+
+    <!-- Extra navigation buttons -->
+    <button onclick="goToViewQuestions()" class="secondary-btn">
+      📜 View all questions
+    </button>
+    <button onclick="goToAddQuestions()" class="secondary-btn">
+      ➕ Add questions
+    </button>
+
     <p id="playersSaved" class="subtext"></p>
+  </div>
+
+  <!-- VIEW QUESTIONS SCREEN -->
+  <div id="viewQuestionsCard" class="card" style="display:none;">
+    <h2 style="font-size:18px;margin-top:0;">All Questions</h2>
+    <p class="subtext">Base questions + any custom ones you've added.</p>
+    <div id="questionsList"></div>
+    <button onclick="backToSetup()" class="secondary-btn" style="margin-top:12px;">
+      ⬅️ Back
+    </button>
+  </div>
+
+  <!-- ADD QUESTIONS SCREEN -->
+  <div id="addQuestionsCard" class="card" style="display:none;">
+    <h2 style="font-size:18px;margin-top:0;">Add a Question</h2>
+    <p class="subtext">
+      New questions are saved in this browser and added to the deck.
+    </p>
+    <input id="newQuestionInput" type="text"
+           placeholder="Type a new question here...">
+    <button onclick="addCustomQuestion()">
+      ➕ Add to question list
+    </button>
+    <button onclick="clearCustomQuestions()" class="secondary-btn">
+      🧹 Clear all custom questions
+    </button>
+    <p id="addQuestionStatus" class="subtext"></p>
+    <button onclick="backToSetup()" class="secondary-btn" style="margin-top:12px;">
+      ⬅️ Back
+    </button>
   </div>
 
   <!-- GAME (hidden at first) -->
@@ -165,39 +208,82 @@
     <h2 style="color:#c0392b;font-size:20px;margin-top:0;">GAME OVER</h2>
     <p class="subtext">Final question each person ended on:</p>
     <div id="finalHistory"></div>
+
+    <h3 style="font-size:16px;margin-top:16px;">Custom questions (this device)</h3>
+    <p class="subtext">Copy any you like into <code>questions.js</code> to make them permanent.</p>
+    <div id="customQuestionsList"></div>
+
     <button onclick="newGame()" style="margin-top:12px;">
       🔁 New game
     </button>
   </div>
 
-  <script>
-    // 1) QUESTIONS – add as many as you like
-    const ALL_QUESTIONS = [
-      "Most likely to be the loudest during sex",
-      "Most likely to cheat",
-      "Most vanilla",
-      "Most likely to be a failure",
-      "Most likely to make you cum",
-      "Most likely to enjoy anal",
-      "Most likely to commit",
-      "Most likely to get pegged/peg",
-      "Most likely to have a sex change",
-      "Best at head",
-      "Most likely to be the best kisser",
-      "Most ripped",
-      "Biggest arsehole (figuratively)",
-      "Biggest simp",
-      "Most likely to OD"
-      // ...paste the rest of your questions here...
-    ];
+  <!-- Load base questions first -->
+  <script src="questions.js"></script>
 
-    // 2) GAME STATE
+  <!-- Main game script -->
+  <script>
+    // 1) BASE QUESTIONS come from questions.js
+    const BASE_QUESTIONS = Array.isArray(window.BASE_QUESTIONS)
+      ? window.BASE_QUESTIONS
+      : [];
+
+    // 2) CUSTOM QUESTIONS (runtime, stored in localStorage)
+    let customQuestions = [];
+
+    function loadCustomQuestions() {
+      try {
+        const saved = localStorage.getItem('ml_customQuestions_v1');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) {
+            customQuestions = parsed;
+          }
+        }
+      } catch (e) {
+        customQuestions = [];
+      }
+    }
+
+    function saveCustomQuestions() {
+      try {
+        localStorage.setItem(
+          'ml_customQuestions_v1',
+          JSON.stringify(customQuestions)
+        );
+      } catch (e) {
+        // ignore storage errors
+      }
+    }
+
+    function clearCustomQuestions() {
+      const sure = confirm(
+        "Clear ALL custom questions from this device?\n(This will not touch questions.js.)"
+      );
+      if (!sure) return;
+
+      // Remove custom questions from memory
+      customQuestions = [];
+      saveCustomQuestions();
+
+      // Also remove any remaining custom questions from the current deck
+      remainingQuestions = remainingQuestions.filter(q => !customQuestions.includes(q));
+
+      document.getElementById('addQuestionStatus').textContent =
+        "Custom question list cleared for this device.";
+    }
+
+    function getAllQuestions() {
+      return [...BASE_QUESTIONS, ...customQuestions];
+    }
+
+    // 3) GAME STATE
     let players = [];
-    let remainingQuestions = [...ALL_QUESTIONS];
+    let remainingQuestions = []; // set on init / new game
 
     let currentPlayerIndex = null;
     let lastPlayerWithQuestion = null;
-    let history = []; // we log every roll with a turnId, but only show final per turn
+    let history = []; // logs every roll with a turnId, but we display only final per turn
 
     // per-turn limit: 3 questions max
     let currentTurnQuestionCount = 0;
@@ -209,7 +295,69 @@
     let wheelAngle = 0;
     let isSpinning = false;
 
-    // ---- SETUP ----
+    // ---- SETUP / NAVIGATION ----
+    function showOnlySetup() {
+      document.getElementById('setupCard').style.display = 'block';
+      document.getElementById('viewQuestionsCard').style.display = 'none';
+      document.getElementById('addQuestionsCard').style.display = 'none';
+    }
+
+    function goToViewQuestions() {
+      renderQuestionsList();
+      document.getElementById('setupCard').style.display = 'none';
+      document.getElementById('addQuestionsCard').style.display = 'none';
+      document.getElementById('viewQuestionsCard').style.display = 'block';
+    }
+
+    function goToAddQuestions() {
+      document.getElementById('addQuestionStatus').textContent = "";
+      document.getElementById('newQuestionInput').value = "";
+      document.getElementById('setupCard').style.display = 'none';
+      document.getElementById('viewQuestionsCard').style.display = 'none';
+      document.getElementById('addQuestionsCard').style.display = 'block';
+    }
+
+    function backToSetup() {
+      showOnlySetup();
+    }
+
+    function renderQuestionsList() {
+      const all = getAllQuestions();
+      const container = document.getElementById('questionsList');
+      if (all.length === 0) {
+        container.innerHTML = "<p class='subtext'>No questions yet.</p>";
+        return;
+      }
+      let html = "<ol>";
+      all.forEach(q => {
+        html += "<li>" + q + "</li>";
+      });
+      html += "</ol>";
+      container.innerHTML = html;
+    }
+
+    function addCustomQuestion() {
+      const input = document.getElementById('newQuestionInput');
+      const text = input.value.trim();
+      const status = document.getElementById('addQuestionStatus');
+
+      if (!text) {
+        alert("Type a question first.");
+        return;
+      }
+
+      // Add to custom list & save
+      customQuestions.push(text);
+      saveCustomQuestions();
+
+      // Also add to remainingQuestions for this session
+      remainingQuestions.push(text);
+
+      input.value = "";
+      status.textContent = "Added! This question is now in the deck.";
+      updateStatus();
+    }
+
     function savePlayers() {
       const text = document.getElementById('namesInput').value;
       players = text.split(',')
@@ -234,8 +382,10 @@
         if (players.length === 0) return; // still nothing
       }
 
-      // Hide setup, show game
+      // Hide all setup-related cards, show game
       document.getElementById('setupCard').style.display = "none";
+      document.getElementById('viewQuestionsCard').style.display = "none";
+      document.getElementById('addQuestionsCard').style.display = "none";
       document.getElementById('gameCard').style.display = "block";
 
       document.getElementById('status').textContent =
@@ -452,6 +602,20 @@
       }
       document.getElementById('finalHistory').innerHTML = html;
 
+      // Show all custom questions so you can copy them into questions.js
+      const customContainer = document.getElementById('customQuestionsList');
+      if (customQuestions.length === 0) {
+        customContainer.innerHTML =
+          "<p class='subtext'>No custom questions stored on this device.</p>";
+      } else {
+        let listHtml = "<ol>";
+        customQuestions.forEach(q => {
+          listHtml += "<li>" + q + "</li>";
+        });
+        listHtml += "</ol>";
+        customContainer.innerHTML = listHtml;
+      }
+
       // hide game, show game over
       document.getElementById('gameCard').style.display = "none";
       document.getElementById('gameOverCard').style.display = "block";
@@ -461,7 +625,7 @@
 
     function newGame() {
       players = [];
-      remainingQuestions = [...ALL_QUESTIONS];
+      remainingQuestions = getAllQuestions();
       currentPlayerIndex = null;
       lastPlayerWithQuestion = null;
       history = [];
@@ -478,7 +642,7 @@
         remainingQuestions.length + " questions available. Spin to start!";
 
       // show setup, hide others
-      document.getElementById('setupCard').style.display = "block";
+      showOnlySetup();
       document.getElementById('gameCard').style.display = "none";
       document.getElementById('gameOverCard').style.display = "none";
 
@@ -488,6 +652,9 @@
 
     // ---- INIT ----
     document.addEventListener('DOMContentLoaded', () => {
+      loadCustomQuestions();
+      remainingQuestions = getAllQuestions();
+
       wheelCanvas = document.getElementById('wheelCanvas');
       wheelCtx = wheelCanvas.getContext('2d');
 
