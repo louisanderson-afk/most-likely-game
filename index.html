@@ -1,380 +1,93 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <title>Most Likely Game</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    * {
-      box-sizing: border-box;
-    }
-
-    :root {
-      --bg: #fafafa;
-      --text: #111827;
-      --card-bg: #ffffff;
-      --card-border: #e0e0e0;
-      --primary: #3498db;
-      --secondary: #95a5a6;
-      --danger: #e74c3c;
-      --accent: #f1c40f;
-    }
-
-    body {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-      max-width: 480px;
-      margin: 0 auto;
-      padding: 12px;
-      background: var(--bg);
-      color: var(--text);
-      transition: background 0.25s ease, color 0.25s ease;
-    }
-
-    /* Themes (we always apply classic in JS) */
-    body.theme-classic {
-      --primary: #3498db;
-      --secondary: #95a5a6;
-      --danger: #e74c3c;
-      --accent: #f1c40f;
-    }
-
-    /* Dark mode overrides */
-    body.dark {
-      --bg: #020617;
-      --text: #e5e7eb;
-      --card-bg: #0f172a;
-      --card-border: #1f2937;
-    }
-
-    h1 {
-      text-align: center;
-      font-size: 22px;
-      margin: 8px 0 4px;
-    }
-
-    .card {
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 12px;
-      padding: 14px;
-      margin-top: 12px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.04);
-      transition: background 0.25s ease, border-color 0.25s ease, transform 0.2s ease;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .card.fade-in {
-      animation: fadeIn 0.3s ease-out;
-    }
-
-    textarea, input[type="text"] {
-      width: 100%;
-      padding: 8px;
-      border-radius: 8px;
-      border: 1px solid #4b5563;
-      resize: vertical;
-      font-size: 14px;
-      background: transparent;
-      color: inherit;
-    }
-
-    button {
-      width: 100%;
-      padding: 10px 14px;
-      border-radius: 10px;
-      border: none;
-      cursor: pointer;
-      margin-top: 8px;
-      font-size: 15px;
-      font-weight: 600;
-      background: var(--primary);
-      color: white;
-      transition: transform 0.1s ease, box-shadow 0.1s ease, background 0.25s ease;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.15);
-    }
-
-    button:active {
-      transform: scale(0.97);
-      box-shadow: 0 1px 2px rgba(0,0,0,0.2);
-    }
-
-    .secondary-btn {
-      background: var(--secondary);
-    }
-
-    .danger-btn {
-      background: var(--danger);
-    }
-
-    #playerDisplay {
-      margin-top: 14px;
-      font-size: 28px;
-      font-weight: 800;
-      text-align: center;
-      animation: fadeInUp 0.25s ease-out;
-    }
-
-    #questionDisplay {
-      margin-top: 12px;
-      font-size: 18px;
-      font-weight: 600;
-      text-align: center;
-      padding: 12px;
-      border-radius: 10px;
-      background: color-mix(in srgb, var(--accent) 10%, transparent);
-      border: 1px solid var(--accent);
-      white-space: pre-wrap;
-      animation: popIn 0.25s ease-out;
-    }
-
-    /* Private question: blurred by default */
-    .blurred {
-      filter: blur(7px);
-    }
-
-    #status {
-      font-size: 12px;
-      color: #9ca3af;
-      margin-top: 6px;
-      text-align: center;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 8px;
-      font-size: 13px;
-    }
-
-    th, td {
-      border: 1px solid #374151;
-      padding: 6px;
-      text-align: left;
-      vertical-align: top;
-    }
-
-    th {
-      background: #111827;
-      color: #e5e7eb;
-    }
-
-    #wheelWrapper {
-      text-align: center;
-      margin-top: 8px;
-    }
-
-    #pointer {
-      width: 0;
-      height: 0;
-      border-left: 12px solid transparent;
-      border-right: 12px solid transparent;
-      border-bottom: 20px solid var(--danger);
-      margin: 0 auto 4px;
-    }
-
-    #wheelCanvas {
-      max-width: 100%;
-      height: auto;
-      touch-action: none;
-      border-radius: 999px;
-      transition: box-shadow 0.25s ease;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-    }
-
-    .subtext {
-      font-size: 12px;
-      color: #9ca3af;
-      margin-top: 4px;
-    }
-
-    .top-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-      margin-bottom: 4px;
-    }
-
-    .toggle-small {
-      width: auto;
-      padding: 6px 10px;
-      font-size: 13px;
-      box-shadow: none;
-    }
-
-    /* Guessing buttons */
-    #guessOptionsContainer button {
-      text-align: left;
-      font-size: 14px;
-      white-space: normal;
-    }
-    #guessResult {
-      margin-top: 10px;
-      text-align: center;
-      font-size: 14px;
-    }
-
-    /* Guess colours */
-    .guess-correct {
-      background: #16a34a !important; /* green */
-    }
-    .guess-wrong {
-      background: #dc2626 !important; /* red */
-    }
-
-    /* Reveal screen extras */
-    #revealCountdown {
-      font-size: 22px;
-      font-weight: 700;
-      text-align: center;
-      margin-top: 6px;
-    }
-
-    #revealQuestionText {
-      margin-top: 14px;
-      font-size: 26px;
-      line-height: 1.3;
-      font-weight: 800;
-      text-align: center;
-      padding: 16px;
-      border-radius: 14px;
-      background: color-mix(in srgb, var(--accent) 18%, transparent);
-      border: 2px solid var(--accent);
-      white-space: pre-wrap;
-    }
-
-    .confetto {
-      position: absolute;
-      top: -10px;
-      width: 6px;
-      height: 10px;
-      opacity: 0.9;
-      animation: confettiFall linear forwards;
-    }
-
-    @keyframes confettiFall {
-      to {
-        transform: translateY(260px) rotateZ(360deg);
-        opacity: 0;
-      }
-    }
-
-    /* Animations */
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(4px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    @keyframes fadeInUp {
-      from { opacity: 0; transform: translateY(6px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    @keyframes popIn {
-      from { opacity: 0; transform: scale(0.96); }
-      to { opacity: 1; transform: scale(1); }
-    }
-  </style>
+  <link rel="stylesheet" href="css/styles.css">
 </head>
-<body>
+<body class="theme-classic">
   <h1>Most Likely Game</h1>
 
   <!-- HOME SCREEN -->
-  <div id="homeCard" class="card fade-in">
+  <div id="homeCard" class="card">
     <div class="top-row">
       <div>
         <strong>Party mode</strong>
-        <p class="subtext" style="margin-top:2px;">Spin, rank, and regret your friendships.</p>
+        <p class="subtext">Spin, rank, and regret your friendships.</p>
       </div>
-      <button id="darkModeBtn" class="toggle-small secondary-btn" onclick="toggleDarkMode()">
+      <button id="darkModeBtn" class="toggle-small secondary-btn">
         🌙 Dark: Off
       </button>
     </div>
 
-    <button onclick="goToAddPlayers()" style="margin-top:12px;">
-      ▶️ Start game
-    </button>
-    <button onclick="goToHowToPlay()" class="secondary-btn">
-      ❓ How to play
-    </button>
-    <button onclick="goToViewQuestions()" class="secondary-btn">
-      📜 Show all questions
-    </button>
+    <div class="level-select-block">
+      <label for="levelSelect" class="subtext"><strong>Intensity level</strong></label>
+      <select id="levelSelect">
+        <option value="1">Level 1 – SFW only</option>
+        <option value="2" selected>Level 2 – Mild spicy</option>
+        <option value="3">Level 3 – Dark</option>
+        <option value="4">Level 4 – Unhinged</option>
+      </select>
+      <p id="levelDescription" class="subtext">
+        SFW + mild spice. Questions your mum could probably cope with (just about).
+      </p>
+    </div>
+
+    <button id="startGameBtn">▶️ Start game</button>
+    <button id="howToBtn" class="secondary-btn">❓ How to play</button>
+    <button id="showQuestionsBtn" class="secondary-btn">📜 Show all questions</button>
   </div>
 
-  <!-- HOW TO PLAY SCREEN -->
+  <!-- HOW TO PLAY -->
   <div id="howToCard" class="card" style="display:none;">
-    <h2 style="font-size:18px;margin-top:0;">How to Play</h2>
-    <ol class="subtext" style="color:inherit;">
-      <li>Tap <strong>Start game</strong> and add player names.</li>
-      <li>Spin the wheel to choose a judge.</li>
-      <li>The judge presses <strong>“Give me a question”</strong> (up to 3 times). Only they can see it by holding the reveal button.</li>
-      <li>Optionally:
-        <br>– Use <strong>Guess mode</strong> so others pick from 5 possible questions (2 guesses).
-        <br>– Use <strong>Reveal big screen</strong> to show the final question with a countdown and confetti.
-      </li>
-      <li>Tap <strong>End Game</strong> to see the final history and custom questions.</li>
+    <h2>How to Play</h2>
+    <ol class="subtext">
+      <li>Choose a level on the home screen.</li>
+      <li>Add your players.</li>
+      <li>Spin the wheel to pick the judge.</li>
+      <li>The judge gets up to 3 questions (2 re-rolls), and must hold to reveal it.</li>
+      <li>Use guess mode or reveal mode if you want extra chaos.</li>
+      <li>End game to see the final history + custom questions.</li>
     </ol>
-    <button onclick="backToHome()" class="secondary-btn">
-      ⬅️ Back to home
-    </button>
+    <button id="howToBackBtn" class="secondary-btn">⬅️ Back to home</button>
   </div>
 
-  <!-- ADD PLAYERS SCREEN -->
+  <!-- ADD PLAYERS -->
   <div id="addPlayersCard" class="card" style="display:none;">
-    <h2 style="font-size:18px;margin-top:0;">Add players</h2>
+    <h2>Add players</h2>
     <p class="subtext">Enter names, separated by commas.</p>
-    <textarea id="namesInput" rows="3"
-      placeholder="Alex, Sam, Jamie, Taylor"></textarea>
-
-    <button onclick="savePlayers()">Save players</button>
-    <button onclick="startGame()">
-      ▶️ Continue to wheel
-    </button>
+    <textarea id="namesInput" rows="3" placeholder="Alex, Sam, Jamie, Taylor"></textarea>
+    <button id="savePlayersBtn">Save players</button>
+    <button id="continueToWheelBtn">▶️ Continue to wheel</button>
     <p id="playersSaved" class="subtext"></p>
-
-    <button onclick="backToHome()" class="secondary-btn" style="margin-top:12px;">
-      ⬅️ Back to home
-    </button>
+    <button id="addPlayersBackBtn" class="secondary-btn">⬅️ Back to home</button>
   </div>
 
-  <!-- VIEW QUESTIONS SCREEN -->
+  <!-- VIEW QUESTIONS -->
   <div id="viewQuestionsCard" class="card" style="display:none;">
-    <h2 style="font-size:18px;margin-top:0;">All Questions</h2>
-    <p class="subtext">Base questions + any custom ones on this device.</p>
+    <h2>All Questions</h2>
+    <p class="subtext">Base questions (by level) + any custom ones on this device.</p>
     <div id="questionsList"></div>
-    <button onclick="goToAddQuestions()" class="secondary-btn">
-      ➕ Add more questions
-    </button>
-    <button onclick="backToHome()" class="secondary-btn" style="margin-top:12px;">
-      ⬅️ Back to home
-    </button>
+    <button id="addQuestionsBtn" class="secondary-btn">➕ Add more questions</button>
+    <button id="viewQuestionsBackBtn" class="secondary-btn">⬅️ Back to home</button>
   </div>
 
-  <!-- ADD QUESTIONS SCREEN -->
+  <!-- ADD QUESTION -->
   <div id="addQuestionsCard" class="card" style="display:none;">
-    <h2 style="font-size:18px;margin-top:0;">Add a Question</h2>
-    <p class="subtext">
-      New questions are saved only on this device and added to the deck.
-    </p>
-    <input id="newQuestionInput" type="text"
-           placeholder="Type a new question here...">
-    <button onclick="addCustomQuestion()">
-      ➕ Add to question list
-    </button>
-    <button onclick="clearCustomQuestions()" class="secondary-btn">
-      🧹 Clear all custom questions
-    </button>
+    <h2>Add a Question</h2>
+    <p class="subtext">Saved locally on this device and used with the current level.</p>
+    <input id="newQuestionInput" type="text" placeholder="Type a new question...">
+    <button id="addQuestionConfirmBtn">➕ Add to question list</button>
+    <button id="clearCustomQuestionsBtn" class="secondary-btn">🧹 Clear all custom questions</button>
     <p id="addQuestionStatus" class="subtext"></p>
-    <button onclick="backToHome()" class="secondary-btn" style="margin-top:12px;">
-      ⬅️ Back to home
-    </button>
+    <button id="addQuestionsBackBtn" class="secondary-btn">⬅️ Back to home</button>
   </div>
 
   <!-- GAME SCREEN -->
   <div id="gameCard" class="card" style="display:none;">
-    <h2 style="font-size:18px;margin:0 0 4px;">Judge selection</h2>
+    <h2>Judge selection</h2>
+    <p id="modeLabel" class="subtext">Mode: Level 2 – Mild spicy</p>
     <p class="subtext">Spin the wheel to choose who goes next.</p>
 
     <div id="wheelWrapper">
@@ -382,779 +95,60 @@
       <canvas id="wheelCanvas" width="280" height="280"></canvas>
     </div>
 
-    <button onclick="spinWheel()">🎡 Spin to choose judge</button>
-
-    <!-- Big judge name -->
+    <button id="spinBtn">🎡 Spin to choose judge</button>
     <div id="playerDisplay"></div>
 
-    <!-- Question area -->
-    <div id="questionArea" style="margin-top:12px;">
-      <button onclick="getQuestion()">❓ Give me a question</button>
+    <div id="questionArea">
+      <button id="getQuestionBtn">❓ Give me a question</button>
       <div id="questionDisplay" class="blurred"></div>
-      <button id="peekButton" class="secondary-btn" style="margin-top:6px;">
+      <button id="peekButton" class="secondary-btn">
         👁️ Hold to reveal question (judge only)
       </button>
     </div>
 
-    <!-- New: guessing + reveal buttons -->
-    <button onclick="startGuessMode()" class="secondary-btn">
-      🔍 Let others guess the question
-    </button>
-    <button onclick="showRevealScreen()" class="secondary-btn">
-      🧾 Reveal question (big screen)
-    </button>
+    <button id="guessModeBtn" class="secondary-btn">🔍 Let others guess the question</button>
+    <button id="revealModeBtn" class="secondary-btn">🧾 Reveal question (big screen)</button>
 
-    <p id="status"></p>
+    <p id="status" class="subtext"></p>
 
-    <!-- END GAME BUTTON -->
-    <button onclick="endGame()" class="danger-btn" style="margin-top:12px;">
-      🚨 End Game
-    </button>
+    <button id="endGameBtn" class="danger-btn">🚨 End Game</button>
   </div>
 
-  <!-- REVEAL QUESTION (BIG SCREEN) -->
+  <!-- REVEAL SCREEN -->
   <div id="revealCard" class="card" style="display:none;">
-    <h2 style="font-size:18px;margin-top:0;text-align:center;">Final Question</h2>
+    <h2 style="text-align:center;">Final Question</h2>
     <div id="revealCountdown"></div>
     <div id="revealQuestionText"></div>
-    <button onclick="backToGameFromReveal()" class="secondary-btn" style="margin-top:12px;">
-      ⬅️ Back to game
-    </button>
+    <button id="revealBackBtn" class="secondary-btn">⬅️ Back to game</button>
   </div>
 
-  <!-- GUESSING MODE SCREEN -->
+  <!-- GUESS MODE -->
   <div id="guessCard" class="card" style="display:none;">
-    <h2 style="font-size:18px;margin-top:0;">Guess the Question</h2>
+    <h2>Guess the Question</h2>
     <p class="subtext">
-      The judge had one secret question. Pick which one you think it was.<br>
-      You get <strong>2 guesses</strong>. If you don’t get it, the real answer stays secret.
+      Pick which one you think the judge had. Two guesses. If you miss, the real question stays secret.
     </p>
-    <div id="guessOptionsContainer" style="margin-top:8px;"></div>
+    <div id="guessOptionsContainer"></div>
     <div id="guessResult" class="subtext"></div>
-    <button onclick="backToGameFromGuess()" class="secondary-btn" style="margin-top:12px;">
-      ⬅️ Back to game
-    </button>
+    <button id="guessBackBtn" class="secondary-btn">⬅️ Back to game</button>
   </div>
 
-  <!-- GAME OVER SCREEN -->
+  <!-- GAME OVER -->
   <div id="gameOverCard" class="card" style="display:none;">
-    <h2 style="color:var(--danger);font-size:20px;margin-top:0;">GAME OVER</h2>
+    <h2 class="danger-text">GAME OVER</h2>
     <p class="subtext">Final question each person ended on:</p>
     <div id="finalHistory"></div>
 
-    <h3 style="font-size:16px;margin-top:16px;">Custom questions (this device)</h3>
-    <p class="subtext">Copy any you like into <code>questions.js</code> to make them permanent.</p>
+    <h3>Custom questions</h3>
+    <p class="subtext">Copy favourites into <code>questions.js</code> to keep them forever.</p>
     <div id="customQuestionsList"></div>
 
-    <button onclick="newGame()" style="margin-top:12px;">
-      🔁 New game
-    </button>
+    <button id="newGameBtn">🔁 New game</button>
   </div>
 
-  <!-- Load base questions first -->
-  <script src="questions.js"></script>
-
-  <!-- Main game script -->
-  <script>
-    // 1) BASE QUESTIONS from questions.js
-    const BASE_QUESTIONS = Array.isArray(window.BASE_QUESTIONS)
-      ? window.BASE_QUESTIONS
-      : [];
-
-    // 2) CUSTOM QUESTIONS (runtime, stored in localStorage)
-    let customQuestions = [];
-
-    function loadCustomQuestions() {
-      try {
-        const saved = localStorage.getItem('ml_customQuestions_v1');
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed)) {
-            customQuestions = parsed;
-          }
-        }
-      } catch (e) {
-        customQuestions = [];
-      }
-    }
-
-    function saveCustomQuestions() {
-      try {
-        localStorage.setItem(
-          'ml_customQuestions_v1',
-          JSON.stringify(customQuestions)
-        );
-      } catch (e) {
-        // ignore storage errors
-      }
-    }
-
-    function clearCustomQuestions() {
-      const sure = confirm(
-        "Clear ALL custom questions from this device?\n(This will not change questions.js.)"
-      );
-      if (!sure) return;
-
-      customQuestions = [];
-      saveCustomQuestions();
-
-      // Rebuild remainingQuestions from base only
-      remainingQuestions = [...BASE_QUESTIONS];
-
-      document.getElementById('addQuestionStatus').textContent =
-        "Custom question list cleared for this device.";
-      updateStatus();
-    }
-
-    function getAllQuestions() {
-      return [...BASE_QUESTIONS, ...customQuestions];
-    }
-
-    // 3) GAME STATE
-    let players = [];
-    let remainingQuestions = []; // set on init / new game
-
-    let currentPlayerIndex = null;
-    let lastPlayerWithQuestion = null;
-    let history = [];
-
-    const MAX_QUESTIONS_PER_TURN = 3;
-    let currentTurnQuestionCount = 0;
-    let currentTurnId = 0;
-
-    let currentQuestionText = null;
-
-    // Guess mode state
-    let guessOptions = [];
-    let correctGuessIndex = null;
-    let guessAttempts = 0;
-
-    // Wheel
-    let wheelCanvas, wheelCtx;
-    let wheelAngle = 0;
-    let isSpinning = false;
-
-    // Reveal countdown
-    let revealCountdownTimer = null;
-
-    // THEME & DARK MODE
-    function applyTheme(theme) {
-      document.body.classList.remove('theme-classic', 'theme-neon', 'theme-sunset');
-      const className = 'theme-' + theme;
-      document.body.classList.add(className);
-      localStorage.setItem('ml_theme', theme);
-    }
-
-    function applyDarkMode(enabled) {
-      if (enabled) {
-        document.body.classList.add('dark');
-      } else {
-        document.body.classList.remove('dark');
-      }
-      localStorage.setItem('ml_darkMode', enabled ? '1' : '0');
-      const btn = document.getElementById('darkModeBtn');
-      if (btn) {
-        btn.textContent = enabled ? "🌙 Dark: On" : "🌙 Dark: Off";
-      }
-    }
-
-    function toggleDarkMode() {
-      const enabled = !document.body.classList.contains('dark');
-      applyDarkMode(enabled);
-    }
-
-    // NAVIGATION
-    function hideAllScreens() {
-      [
-        'homeCard','howToCard','addPlayersCard','viewQuestionsCard',
-        'addQuestionsCard','gameCard','gameOverCard','revealCard','guessCard'
-      ].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.style.display = 'none';
-      });
-    }
-
-    function backToHome() {
-      hideAllScreens();
-      const c = document.getElementById('homeCard');
-      c.style.display = 'block';
-      c.classList.add('fade-in');
-    }
-
-    function goToHowToPlay() {
-      hideAllScreens();
-      const c = document.getElementById('howToCard');
-      c.style.display = 'block';
-      c.classList.add('fade-in');
-    }
-
-    function goToAddPlayers() {
-      hideAllScreens();
-      const c = document.getElementById('addPlayersCard');
-      c.style.display = 'block';
-      c.classList.add('fade-in');
-    }
-
-    function goToViewQuestions() {
-      renderQuestionsList();
-      hideAllScreens();
-      const c = document.getElementById('viewQuestionsCard');
-      c.style.display = 'block';
-      c.classList.add('fade-in');
-    }
-
-    function goToAddQuestions() {
-      document.getElementById('addQuestionStatus').textContent = "";
-      document.getElementById('newQuestionInput').value = "";
-      hideAllScreens();
-      const c = document.getElementById('addQuestionsCard');
-      c.style.display = 'block';
-      c.classList.add('fade-in');
-    }
-
-    function renderQuestionsList() {
-      const all = getAllQuestions();
-      const container = document.getElementById('questionsList');
-      if (all.length === 0) {
-        container.innerHTML = "<p class='subtext'>No questions yet.</p>";
-        return;
-      }
-      let html = "<ol>";
-      all.forEach(q => {
-        html += "<li>" + q + "</li>";
-      });
-      html += "</ol>";
-      container.innerHTML = html;
-    }
-
-    function addCustomQuestion() {
-      const input = document.getElementById('newQuestionInput');
-      const text = input.value.trim();
-      const status = document.getElementById('addQuestionStatus');
-
-      if (!text) {
-        alert("Type a question first.");
-        return;
-      }
-
-      customQuestions.push(text);
-      saveCustomQuestions();
-
-      remainingQuestions.push(text);
-
-      input.value = "";
-      status.textContent = "Added! This question is now in the deck.";
-      updateStatus();
-    }
-
-    // PLAYERS
-    function savePlayers() {
-      const text = document.getElementById('namesInput').value;
-      players = text.split(',')
-                    .map(n => n.trim())
-                    .filter(n => n.length > 0);
-
-      if (players.length === 0) {
-        alert("Add at least one player name.");
-        return;
-      }
-
-      document.getElementById('playersSaved').textContent =
-        "Players: " + players.join(", ");
-
-      drawWheel();
-    }
-
-    function startGame() {
-      if (players.length === 0) {
-        savePlayers();
-        if (players.length === 0) return;
-      }
-
-      hideAllScreens();
-      const c = document.getElementById('gameCard');
-      c.style.display = 'block';
-      c.classList.add('fade-in');
-
-      document.getElementById('status').textContent =
-        remainingQuestions.length + " questions available. Spin to start!";
-      drawWheel();
-    }
-
-    // WHEEL
-    function drawWheel() {
-      if (!wheelCtx || players.length === 0) {
-        if (wheelCtx) {
-          wheelCtx.clearRect(0, 0, wheelCanvas.width, wheelCanvas.height);
-        }
-        return;
-      }
-
-      const ctx = wheelCtx;
-      const canvas = wheelCanvas;
-      const radius = canvas.width / 2 - 8;
-      const centerX = canvas.width / 2;
-      const centerY = canvas.height / 2;
-      const segmentAngle = 2 * Math.PI / players.length;
-
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.save();
-      ctx.translate(centerX, centerY);
-      ctx.rotate(wheelAngle);
-
-      for (let i = 0; i < players.length; i++) {
-        const startAngle = i * segmentAngle;
-        const endAngle = startAngle + segmentAngle;
-
-        ctx.beginPath();
-        ctx.moveTo(0, 0);
-        ctx.arc(0, 0, radius, startAngle, endAngle);
-        ctx.closePath();
-        ctx.fillStyle = i % 2 === 0 ? "#f97316" : "#22c55e";
-        ctx.fill();
-        ctx.strokeStyle = "#111827";
-        ctx.stroke();
-
-        ctx.save();
-        ctx.fillStyle = "#111827";
-        ctx.rotate(startAngle + segmentAngle / 2);
-        ctx.textAlign = "right";
-        ctx.font = "13px system-ui";
-        ctx.fillText(players[i], radius - 10, 4);
-        ctx.restore();
-      }
-
-      ctx.restore();
-
-      ctx.beginPath();
-      ctx.arc(centerX, centerY, 8, 0, 2 * Math.PI);
-      ctx.fillStyle = "#ffffff";
-      ctx.strokeStyle = "#111827";
-      ctx.fill();
-      ctx.stroke();
-    }
-
-    function spinWheel() {
-      if (players.length === 0) {
-        alert("Add players first.");
-        return;
-      }
-      if (isSpinning) return;
-
-      let availableIndices = players.map((_, i) => i);
-      if (players.length > 1 && lastPlayerWithQuestion !== null) {
-        availableIndices = availableIndices.filter(i => i !== lastPlayerWithQuestion);
-      }
-      const targetIndex =
-        availableIndices[Math.floor(Math.random() * availableIndices.length)];
-
-      isSpinning = true;
-      document.getElementById('playerDisplay').textContent = "Spinning…";
-      document.getElementById('questionDisplay').textContent = "";
-      document.getElementById('questionDisplay').classList.add('blurred');
-      currentQuestionText = null;
-      guessOptions = [];
-      guessAttempts = 0;
-
-      const extraRotations = 4 + Math.random() * 2;
-      const extraAngle = extraRotations * 2 * Math.PI;
-      const startAngle = wheelAngle;
-      const duration = 2500 + Math.random() * 1000;
-      const startTime = performance.now();
-
-      function animate(now) {
-        const elapsed = now - startTime;
-        const t = Math.min(1, elapsed / duration);
-        const eased = 1 - Math.pow(1 - t, 3);
-
-        wheelAngle = startAngle + eased * extraAngle;
-        drawWheel();
-
-        if (t < 1) {
-          requestAnimationFrame(animate);
-        } else {
-          isSpinning = false;
-          currentPlayerIndex = targetIndex;
-          const chosenName = players[currentPlayerIndex];
-          const pd = document.getElementById('playerDisplay');
-          pd.textContent = chosenName;
-          pd.classList.add('fade-in');
-
-          currentTurnId += 1;
-          currentTurnQuestionCount = 0;
-          updateStatus();
-
-          if (navigator.vibrate) {
-            navigator.vibrate(120);
-          }
-
-          pd.scrollIntoView({ behavior: "smooth", block: "center" });
-        }
-      }
-
-      requestAnimationFrame(animate);
-    }
-
-    // QUESTIONS & TURN LIMIT
-    function getQuestion() {
-      if (currentPlayerIndex === null) {
-        alert("Spin the wheel to choose a judge first!");
-        return;
-      }
-
-      if (currentTurnQuestionCount >= MAX_QUESTIONS_PER_TURN) {
-        alert("No more re-rolls this turn! You must answer the last question.");
-        return;
-      }
-
-      if (remainingQuestions.length === 0) {
-        document.getElementById('questionDisplay').textContent =
-          "No questions left in the deck.";
-        updateStatus();
-        return;
-      }
-
-      const idx = Math.floor(Math.random() * remainingQuestions.length);
-      const question = remainingQuestions.splice(idx, 1)[0];
-      const playerName = players[currentPlayerIndex];
-
-      currentTurnQuestionCount += 1;
-      currentQuestionText = question;
-      guessOptions = [];
-      guessAttempts = 0;
-
-      let prefix = "";
-      if (currentTurnQuestionCount === 1) {
-        prefix = "First question:";
-      } else if (currentTurnQuestionCount === 2) {
-        prefix = "Second question (1 re-roll used):";
-      } else if (currentTurnQuestionCount === 3) {
-        prefix = "FINAL question (no more re-rolls):";
-      }
-
-      const qd = document.getElementById('questionDisplay');
-      qd.textContent = prefix + "\n\n" + question;
-      qd.classList.add('fade-in');
-      qd.classList.add('blurred'); // keep private by default
-
-      lastPlayerWithQuestion = currentPlayerIndex;
-
-      history.push({
-        player: playerName,
-        question: question,
-        turnId: currentTurnId,
-        roll: currentTurnQuestionCount
-      });
-
-      updateStatus();
-    }
-
-    function updateStatus() {
-      const remaining = remainingQuestions.length;
-      const usedThisTurn = currentTurnQuestionCount;
-      const leftThisTurn = MAX_QUESTIONS_PER_TURN - usedThisTurn;
-
-      let text = remaining + " questions left in deck. ";
-      if (currentPlayerIndex !== null) {
-        text += " | This turn: " + usedThisTurn + "/" + MAX_QUESTIONS_PER_TURN;
-        if (leftThisTurn > 0) {
-          text += " (" + leftThisTurn + " re-rolls left)";
-        } else {
-          text += " (no re-rolls left)";
-        }
-      }
-
-      document.getElementById('status').textContent = text;
-    }
-
-    // PRIVATE QUESTION PEEK (hold button)
-    function showQuestion() {
-      const qd = document.getElementById('questionDisplay');
-      qd.classList.remove('blurred');
-    }
-
-    function hideQuestion() {
-      const qd = document.getElementById('questionDisplay');
-      if (qd.textContent.trim() !== "") {
-        qd.classList.add('blurred');
-      }
-    }
-
-    function attachPeekHandlers() {
-      const btn = document.getElementById('peekButton');
-      if (!btn) return;
-
-      const startEvents = ['mousedown', 'touchstart'];
-      const endEvents = ['mouseup', 'mouseleave', 'touchend', 'touchcancel'];
-
-      startEvents.forEach(ev => {
-        btn.addEventListener(ev, (e) => {
-          e.preventDefault();
-          showQuestion();
-        });
-      });
-
-      endEvents.forEach(ev => {
-        btn.addEventListener(ev, (e) => {
-          e.preventDefault();
-          hideQuestion();
-        });
-      });
-    }
-
-    // REVEAL MODE
-    function clearRevealCountdown() {
-      if (revealCountdownTimer !== null) {
-        clearInterval(revealCountdownTimer);
-        revealCountdownTimer = null;
-      }
-    }
-
-    function startConfetti() {
-      const card = document.getElementById('revealCard');
-      const colors = ['#f97316','#22c55e','#3b82f6','#eab308','#ec4899','#22d3ee'];
-
-      for (let i = 0; i < 80; i++) {
-        const conf = document.createElement('div');
-        conf.className = 'confetto';
-        const left = Math.random() * 100;
-        const duration = 1 + Math.random() * 1.5;
-        const delay = Math.random() * 0.5;
-
-        conf.style.left = left + '%';
-        conf.style.background = colors[Math.floor(Math.random() * colors.length)];
-        conf.style.animationDuration = duration + 's';
-        conf.style.animationDelay = delay + 's';
-
-        card.appendChild(conf);
-
-        setTimeout(() => {
-          conf.remove();
-        }, (duration + delay) * 1000 + 200);
-      }
-    }
-
-    function showRevealScreen() {
-      if (!currentQuestionText) {
-        alert("You need a question first. Press 'Give me a question'.");
-        return;
-      }
-
-      hideAllScreens();
-      clearRevealCountdown();
-
-      const textEl = document.getElementById('revealQuestionText');
-      const countdownEl = document.getElementById('revealCountdown');
-
-      textEl.textContent = currentQuestionText;
-
-      let remaining = 5;
-      countdownEl.textContent = "Revealing in " + remaining + "…";
-
-      revealCountdownTimer = setInterval(() => {
-        remaining--;
-        if (remaining > 0) {
-          countdownEl.textContent = "Revealing in " + remaining + "…";
-        } else {
-          countdownEl.textContent = "🔥 GO!";
-          startConfetti();
-          clearRevealCountdown();
-        }
-      }, 1000);
-
-      const c = document.getElementById('revealCard');
-      c.style.display = 'block';
-      c.classList.add('fade-in');
-    }
-
-    function backToGameFromReveal() {
-      clearRevealCountdown();
-      hideAllScreens();
-      const c = document.getElementById('gameCard');
-      c.style.display = 'block';
-      c.classList.add('fade-in');
-    }
-
-    // GUESS MODE
-    function startGuessMode() {
-      if (!currentQuestionText) {
-        alert("You need a question first. Press 'Give me a question'.");
-        return;
-      }
-
-      const correct = currentQuestionText;
-      const all = getAllQuestions().filter(q => q !== correct);
-      const distractors = [];
-      const maxDistractors = Math.min(4, all.length);
-      const pool = [...all];
-
-      for (let i = 0; i < maxDistractors; i++) {
-        if (pool.length === 0) break;
-        const idx = Math.floor(Math.random() * pool.length);
-        distractors.push(pool.splice(idx, 1)[0]);
-      }
-
-      guessOptions = [correct, ...distractors];
-      for (let i = guessOptions.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [guessOptions[i], guessOptions[j]] = [guessOptions[j], guessOptions[i]];
-      }
-      correctGuessIndex = guessOptions.indexOf(correct);
-      guessAttempts = 0;
-
-      const container = document.getElementById('guessOptionsContainer');
-      container.innerHTML = "";
-      guessOptions.forEach((q, index) => {
-        const btn = document.createElement('button');
-        btn.className = "secondary-btn";
-        btn.textContent = q;
-        btn.onclick = () => handleGuessClick(index, btn);
-        container.appendChild(btn);
-      });
-
-      document.getElementById('guessResult').textContent = "";
-
-      hideAllScreens();
-      const c = document.getElementById('guessCard');
-      c.style.display = 'block';
-      c.classList.add('fade-in');
-    }
-
-    function handleGuessClick(index, btnEl) {
-      const resultEl = document.getElementById('guessResult');
-      const buttons = document.querySelectorAll('#guessOptionsContainer button');
-
-      if (guessAttempts >= 2) {
-        alert("No more guesses this round!");
-        return;
-      }
-
-      if (index === correctGuessIndex) {
-        resultEl.textContent = "✅ Correct! You guessed the question.";
-        btnEl.classList.add('guess-correct');
-        buttons.forEach(b => b.disabled = true);
-        guessAttempts = 999;
-      } else {
-        guessAttempts++;
-        btnEl.classList.add('guess-wrong');
-
-        if (guessAttempts < 2) {
-          resultEl.textContent = "❌ Nope! Try one more time.";
-        } else {
-          resultEl.textContent = "❌ No more guesses. The real question stays secret.";
-          buttons.forEach(b => b.disabled = true);
-        }
-      }
-    }
-
-    function backToGameFromGuess() {
-      hideAllScreens();
-      const c = document.getElementById('gameCard');
-      c.style.display = 'block';
-      c.classList.add('fade-in');
-    }
-
-    // END GAME / NEW GAME
-    function endGame() {
-      const sure = confirm(
-        "Are you sure you want to end the game?\nYou’ll see the final history and can’t continue this round."
-      );
-      if (!sure) return;
-
-      let html;
-      if (history.length === 0) {
-        html = "<p class='subtext'>No rounds were played.</p>";
-      } else {
-        const finalByTurn = {};
-        history.forEach(h => {
-          finalByTurn[h.turnId] = h;
-        });
-
-        const turnIds = Object.keys(finalByTurn)
-          .map(Number)
-          .sort((a, b) => a - b);
-
-        html = "<table><tr><th>#</th><th>Player</th><th>Final question</th></tr>";
-        let displayRound = 1;
-        turnIds.forEach(tid => {
-          const h = finalByTurn[tid];
-          html += "<tr><td>" + displayRound++ + "</td><td>" +
-                  h.player + "</td><td>" + h.question + "</td></tr>";
-        });
-        html += "</table>";
-      }
-      document.getElementById('finalHistory').innerHTML = html;
-
-      const customContainer = document.getElementById('customQuestionsList');
-      if (customQuestions.length === 0) {
-        customContainer.innerHTML =
-          "<p class='subtext'>No custom questions stored on this device.</p>";
-      } else {
-        let listHtml = "<ol>";
-        customQuestions.forEach(q => {
-          listHtml += "<li>" + q + "</li>";
-        });
-        listHtml += "</ol>";
-        customContainer.innerHTML = listHtml;
-      }
-
-      hideAllScreens();
-      const c = document.getElementById('gameOverCard');
-      c.style.display = 'block';
-      c.classList.add('fade-in');
-      c.scrollIntoView({ behavior: "smooth" });
-    }
-
-    function newGame() {
-      players = [];
-      remainingQuestions = getAllQuestions();
-      currentPlayerIndex = null;
-      lastPlayerWithQuestion = null;
-      history = [];
-      wheelAngle = 0;
-      isSpinning = false;
-      currentTurnQuestionCount = 0;
-      currentTurnId = 0;
-      currentQuestionText = null;
-      guessOptions = [];
-      guessAttempts = 0;
-
-      document.getElementById('namesInput').value = "";
-      document.getElementById('playersSaved').textContent = "";
-      document.getElementById('playerDisplay').textContent = "";
-      const qd = document.getElementById('questionDisplay');
-      qd.textContent = "";
-      qd.classList.add('blurred');
-      document.getElementById('status').textContent =
-        remainingQuestions.length + " questions available. Spin to start!";
-
-      hideAllScreens();
-      const c = document.getElementById('homeCard');
-      c.style.display = 'block';
-      c.classList.add('fade-in');
-
-      drawWheel();
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }
-
-    // INIT
-    document.addEventListener('DOMContentLoaded', () => {
-      loadCustomQuestions();
-      remainingQuestions = getAllQuestions();
-
-      wheelCanvas = document.getElementById('wheelCanvas');
-      wheelCtx = wheelCanvas.getContext('2d');
-
-      applyTheme('classic');
-      const savedDark = localStorage.getItem('ml_darkMode') === '1';
-      applyDarkMode(savedDark);
-
-      document.getElementById('status').textContent =
-        remainingQuestions.length + " questions available. Spin to start!";
-
-      drawWheel();
-      attachPeekHandlers();
-    });
-  </script>
+  <!-- Scripts -->
+  <script src="js/questions.js"></script>
+  <script src="js/gameCore.js"></script>
+  <script src="js/uiMenus.js"></script>
 </body>
 </html>
